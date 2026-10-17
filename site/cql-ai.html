@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cql-ai: neural anti-pattern detector for CQL</title>
+<meta name="description" content="A tiny Transformer over cqlc lexer tokens that flags Cassandra anti-patterns in CI with probabilities, in milliseconds.">
+<link rel="icon" href="logo.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="nav"><div class="wrap">
+<a class="brand" href="index.html">cql<b>z</b></a><a class="link" href="index.html">Family</a><a class="link" href="cqlc.html">cqlc</a><a class="link" href="cqlx.html">cqlx</a><a class="link" href="cql-ai.html" aria-current="page">cql-ai</a><a class="link" href="benchmarks.html">Benchmarks</a>
+<a class="link gh" href="https://github.com/Max-imalgutaussehend/cqlz">GitHub</a>
+</div></header>
+<main>
+<div class="wrap hero">
+<h1>cql<b>-ai</b></h1>
+<p class="lead">A from-scratch, 0.6M-parameter Transformer that reads CQL as <a href="cqlc.html">cqlc</a> lexer tokens, not text, and warns about anti-patterns in your pull requests.</p>
+<div class="btns"><a class="btn primary" href="https://github.com/Max-imalgutaussehend/cql-ai">GitHub</a><a class="btn" href="https://huggingface.co/Max-imalgutaussehend/cql-anti-pattern-transformer">Hugging Face</a><a class="btn" href="benchmarks.html">Benchmarks</a></div>
+</div>
+
+<section><div class="wrap">
+<h2>Compiler-style output</h2>
+<pre><code>$ cql-ai check queries/ --schema schema/
+<span class="k">warning</span>: AI detects 97% probability of Missing Partition Key on line 4
+  <span class="s">--&gt;</span> queries/events.cql:4:1
+   |
+ 4 | SELECT body FROM events WHERE tenant = ?
+   |
+   = help: partition key not fully restricted: the query can fan out across partitions
+
+cql-ai: checked 12 statement(s) in 3 file(s), 1 warning(s)</code></pre>
+</div></section>
+
+<section><div class="wrap">
+<h2>No text tokenizer</h2>
+<p class="sub">Queries go through the cqlc-core lexer. Every token kind has a fixed id, keywords have their own ids, and identifiers become a role token (<code>COL_PK</code>, <code>COL_CK0</code>, <code>COL_SET</code>, …) from the schema, or one of 64 hash buckets. The vocabulary is about 240 ids.</p>
+<pre><code>SELECT body FROM events WHERE tenant = ? AND ts &gt; ?
+<span class="c">[CLS] SELECT COL_REG FROM TABLE_PK2 WHERE COL_PK = BIND AND COL_CK0 &gt; BIND</span></code></pre>
+<div class="note">The model needs the schema to know which columns are keys. <code>cql-ai check</code> reads <code>CREATE</code> statements from <code>--schema</code> or from the checked files and refuses to run without them.</div>
+<h3>Architecture</h3>
+<div class="diagram">
+<div class="node"><b>Embeddings</b>token + position, d=128</div><div class="arrow">→</div>
+<div class="node"><b>4 × encoder</b>4 heads, FFN 256, pre-norm, pad mask</div><div class="arrow">→</div>
+<div class="node"><b>Masked mean pool</b>LayerNorm</div><div class="arrow">→</div>
+<div class="node"><b>6 sigmoid outputs</b>multi-label</div>
+</div>
+<p class="sub">Built with <a href="https://burn.dev">Burn</a> 0.22; weights are plain safetensors (2.3 MB).</p>
+</div></section>
+
+<section><div class="wrap">
+<h2>What it detects</h2>
+<table>
+<tr><th>Label</th><th>Meaning</th><th>Ground truth</th></tr>
+<tr><td><code>MissingPartitionKey</code></td><td>partition key not fully restricted</td><td>cqlc <code>CQL111</code>/<code>CQL201</code></td></tr>
+<tr><td><code>InefficientAllowFiltering</code></td><td><code>ALLOW FILTERING</code></td><td>cqlc <code>CQL202</code></td></tr>
+<tr><td><code>NonKeyRestriction</code></td><td>restriction on a non-key column</td><td>cqlc <code>CQL203</code></td></tr>
+<tr><td><code>ClusteringGap</code></td><td>clustering restriction skips a column</td><td>cqlc <code>CQL204</code></td></tr>
+<tr><td><code>OrderByMismatch</code></td><td><code>ORDER BY</code> against the clustering order</td><td>cqlc <code>CQL205</code></td></tr>
+<tr><td><code>LargeCollectionUpdate</code></td><td><code>UPDATE</code> overwrites a whole collection</td><td>rule in the data generator</td></tr>
+</table>
+<p class="sub">Training data: 100,000 synthetic statements from a randomised AST-to-text generator over random schemas, labelled automatically by cqlc-core's analyzer. Validation uses schemas the model has never seen.</p>
+<div class="note">Honest limits: the model learns what cqlc's analyzer decides deterministically, plus one rule. It is a fast, fuzzy, schema-aware linter for partial queries, not a replacement for <code>cqlc check</code>, and it cannot see data distributions, so real hot-partition detection is out of scope.</div>
+</div></section>
+
+<section><div class="wrap">
+<h2>Drop it into CI</h2>
+<pre><code><span class="c"># .github/workflows/cql-ai.yml</span>
+- uses: actions/cache@v4
+  with: { path: ~/.cache/cql-ai, key: cql-ai-model-v1 }
+- run: curl -fsSL https://github.com/Max-imalgutaussehend/cql-ai/releases/latest/download/cql-ai-x86_64-unknown-linux-gnu.tar.gz | sudo tar -xz -C /usr/local/bin cql-ai
+- run: cql-ai check queries/ --schema schema/ --deny-warnings</code></pre>
+<p class="sub">The model is fetched from Hugging Face once and cached in <code>~/.cache/cql-ai/</code>; the CLI statically links the pure-Rust CPU backend.</p>
+</div></section>
+
+</main>
+<footer><div class="wrap">
+<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a>. Apache-2.0.</span>
+<span>Built by <a href="https://github.com/Max-imalgutaussehend">Max-imalgutaussehend</a></span>
+</div></footer>
+</body>
+</html>

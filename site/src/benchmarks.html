@@ -1,0 +1,82 @@
+cqlz benchmarks: cqlc, cqlx and cql-ai measured
+---
+Measured benchmarks for the cqlz family: cqlc front-end vs sqlparser, cqlx vs the raw ScyllaDB driver and charybdis, cql-ai latency and sequence length.
+---
+<div class="wrap hero">
+<h1>Benchmarks</h1>
+<p class="lead">Real measurements, including the ones that do not flatter us. Every number is reproducible with the commands at the bottom.</p>
+<div class="note">Machine: Apple M3, 8 cores, 16 GB, macOS 27, Rust 1.99 release builds, Criterion (median of 100 samples unless noted), ScyllaDB in Docker on the same machine. Treat absolute numbers as indicative; ratios matter more.</div>
+</div>
+
+<section><div class="wrap">
+<h2>cqlc: front-end speed</h2>
+<p class="sub">Input: the 36 queries and schema of cqlc's <code>shop</code> example (about 5 KB). Comparison: <a href="https://crates.io/crates/sqlparser">sqlparser</a>, the most widely used Rust SQL parser. It parses SQL, not CQL, so it only accepts 22 of the 36 statements; the table uses those 22 for the parse-to-parse row.</p>
+<table>
+<tr><th>Benchmark</th><th class="num">Time</th><th class="num">Throughput</th></tr>
+<tr><td>cqlc lexer, all queries</td><td class="num">13.9 µs</td><td class="num">298 MiB/s</td></tr>
+<tr><td>cqlc parser, all queries</td><td class="num">52 µs</td><td class="num">79 MiB/s</td></tr>
+<tr><td><b>cqlc full analysis</b>: lex, parse, resolve schema, type-check 36 queries</td><td class="num">103 µs</td><td class="num">40 MiB/s</td></tr>
+<tr><td>sqlparser parse, 22 accepted statements</td><td class="num">126 µs</td><td class="num">15.7 MiB/s</td></tr>
+<tr><td>cqlc parse, the same 22 statements</td><td class="num">33 µs</td><td class="num">59.7 MiB/s</td></tr>
+</table>
+<p class="sub">Reading: on identical statements cqlc's parser is about <b>3.8× faster</b> than sqlparser's, and cqlc's complete analysis, which also checks every query against the schema, finishes in less time than sqlparser needs for parsing alone. Caveat: sqlparser is a general multi-dialect parser, so this shows cqlc is lean for CQL, not that sqlparser is slow.</p>
+<div class="bar"><i style="width:26%"></i></div><p class="sub" style="font-size:14px;margin-top:6px">cqlc parse 33 µs vs sqlparser 126 µs (bar = cqlc share)</p>
+</div></section>
+
+<section><div class="wrap">
+<h2>cqlx: abstraction cost</h2>
+<h3>In-process: building a statement (no network)</h3>
+<table>
+<tr><th>Benchmark</th><th class="num">Time</th></tr>
+<tr><td>cqlx type-state <code>SELECT</code> (2 partition keys, 1 range, limit; validated)</td><td class="num">320 ns</td></tr>
+<tr><td>hand-written <code>format!</code> + boxed values (no validation)</td><td class="num">68 ns</td></tr>
+<tr><td>cqlx <code>insert_values()</code> (4 columns)</td><td class="num">46 ns</td></tr>
+</table>
+<p class="sub">The builder costs about 250 ns more than concatenating strings by hand. That buys compile-time partition-key enforcement and clustering validation. The type-state itself is free: the type parameters are zero-sized.</p>
+<h3>Against a real ScyllaDB (Docker): cqlx vs raw driver vs charybdis</h3>
+<table>
+<tr><th>Operation</th><th class="num">cqlx</th><th class="num">raw scylla driver</th><th class="num">charybdis</th></tr>
+<tr><td>select one partition (10 rows)</td><td class="num">142.7 µs</td><td class="num">148.0 µs</td><td class="num">147.1 µs</td></tr>
+<tr><td>insert one row</td><td class="num">140.7 µs</td><td class="num">139.6 µs</td><td class="num">141.8 µs</td></tr>
+</table>
+<p class="sub">All three use prepared statements on the same table and are indistinguishable within noise (±3%): a database round trip costs about 140 µs, so a 0.3 µs builder is invisible. "Zero overhead" holds in the sense that matters on the wire. <a href="https://crates.io/crates/charybdis">charybdis</a> is the closest existing Rust ORM for ScyllaDB; this is a single-node loopback test, not a cluster benchmark.</p>
+</div></section>
+
+<section><div class="wrap">
+<h2>cql-ai: cost and sequence length</h2>
+<table>
+<tr><th>Benchmark (36 statements)</th><th class="num">Time</th></tr>
+<tr><td>cql-ai tokenization (cqlc lexer + schema roles)</td><td class="num">43 µs</td></tr>
+<tr><td>cql-ai Transformer forward, one batch of 36 (CPU, pure Rust)</td><td class="num">41 ms</td></tr>
+<tr><td>cql-ai Transformer forward, single statement</td><td class="num">1.12 ms</td></tr>
+<tr><td>cqlc deterministic analysis of the same 36 statements</td><td class="num">0.10 ms</td></tr>
+<tr><td><code>cql-ai check</code> end to end, wall clock incl. process start and loading weights</td><td class="num">≈ 52 ms</td></tr>
+</table>
+<div class="note"><b>The honest comparison:</b> the neural model is about 400× slower than cqlc's own analyzer on the statements both can handle. It still comfortably meets a CI budget (about 52 ms wall for a whole file, against a 500 ms target), but speed is not its selling point. Its niche is tolerating partial or non-compiling queries and reporting probabilities; use <code>cqlc check</code> when you have a complete schema and want certainty.</div>
+<h3>Sequence length</h3>
+<table>
+<tr><th>Representation (per statement, average)</th><th class="num">Length</th></tr>
+<tr><td>UTF-8 bytes</td><td class="num">86.1</td></tr>
+<tr><td>Whitespace-separated words</td><td class="num">13.0</td></tr>
+<tr><td>BPE-style subwords (estimated at ~3.5 bytes/token, not measured)</td><td class="num">≈ 24.6</td></tr>
+<tr><td><b>cql-ai ids</b> (lexer tokens + roles)</td><td class="num">17.9</td></tr>
+</table>
+<p class="sub">So lexer ids are <b>4.8× shorter than bytes</b> and about <b>1.4× shorter</b> than an estimated BPE sequence, not 10×. The bigger win is the vocabulary: 240 ids instead of roughly 50,000, which keeps the embedding table and the whole model tiny (576k parameters, 2.3 MB).</p>
+<h3>Model quality</h3>
+<p class="sub">On 10,000 statements from unseen synthetic schemas: macro-F1 0.977, exact label-set match 94.9%; four of six labels at F1 ≥ 0.99, the weakest, <code>MissingPartitionKey</code>, at 0.885. These measure fidelity to cqlc's analyzer on synthetic data, not accuracy on arbitrary real-world CQL.</p>
+</div></section>
+
+<section><div class="wrap">
+<h2>Reproduce</h2>
+<pre><code><span class="c"># cqlc front-end, cql-ai latency and token stats</span>
+git clone https://github.com/Max-imalgutaussehend/cqlz &amp;&amp; cd cqlz
+cargo bench -p cqlz-benchmarks --bench frontend
+cargo bench -p cqlz-benchmarks --bench inference
+cargo run --release --bin token_stats
+
+<span class="c"># cqlx (the db bench needs Docker)</span>
+git clone https://github.com/Max-imalgutaussehend/cqlx &amp;&amp; cd cqlx
+cargo bench -p cqlx --bench build
+cargo bench -p cqlx --bench db</code></pre>
+<p class="sub">Not measured: cluster-scale throughput, tail latencies under load, comparisons of cqlc-generated code against the raw driver (it is thin wrappers over prepared statements, so we expect parity with the cqlx result, but have not run it).</p>
+</div></section>

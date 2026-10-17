@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cqlc: static CQL analyzer and Rust code generator</title>
+<meta name="description" content="cqlc type-checks CQL schema and queries offline and generates typed async Rust on the ScyllaDB driver.">
+<link rel="icon" href="logo.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="nav"><div class="wrap">
+<a class="brand" href="index.html">cql<b>z</b></a><a class="link" href="index.html">Family</a><a class="link" href="cqlc.html" aria-current="page">cqlc</a><a class="link" href="cqlx.html">cqlx</a><a class="link" href="cql-ai.html">cql-ai</a><a class="link" href="benchmarks.html">Benchmarks</a>
+<a class="link gh" href="https://github.com/Max-imalgutaussehend/cqlz">GitHub</a>
+</div></header>
+<main>
+<div class="wrap hero"><div class="split">
+<img class="logo" src="logo.png" alt="cqlc logo: an orange crab with the Cassandra eye">
+<div>
+<h1>cql<b>c</b></h1>
+<p class="lead">A static CQL analyzer and Rust code generator for Cassandra-compatible databases, in the spirit of sqlc. Schema-first, offline, deterministic.</p>
+<div class="btns"><a class="btn primary" href="https://github.com/Max-imalgutaussehend/cqlc">GitHub</a><a class="btn" href="https://crates.io/crates/cqlc">crates.io</a><a class="btn" href="https://docs.rs/cqlc-core">docs.rs</a></div>
+</div></div></div>
+
+<section><div class="wrap">
+<h2>Write CQL, get typed Rust</h2>
+<pre><code><span class="c">-- schema/schema.cql</span>
+<span class="k">CREATE TABLE</span> users_by_id (
+    user_id uuid <span class="k">PRIMARY KEY</span>,
+    username text,
+    email text,
+    created_at timestamp
+);
+
+<span class="c">-- queries/users.cql</span>
+<span class="c">-- name: GetUserById :one</span>
+<span class="k">SELECT</span> user_id, username, email, created_at
+<span class="k">FROM</span> users_by_id
+<span class="k">WHERE</span> user_id = ?;</code></pre>
+<pre><code><span class="k">let</span> user: Option&lt;GetUserByIdRow&gt; = queries.get_user_by_id(user_id).<span class="k">await</span>?;
+<span class="c">// user.username: Option&lt;String&gt;   (regular columns may be absent)</span>
+<span class="c">// user.user_id:  Uuid             (primary key columns never are)</span></code></pre>
+<pre><code>cargo install cqlc
+cqlc init        <span class="c"># cqlc.toml, schema/schema.cql, queries/users.cql</span>
+cqlc generate    <span class="c"># writes src/queries.rs</span></code></pre>
+<p class="sub">cqlc is not a driver, an ORM, a query builder or a migration tool. It needs no database connection to generate code.</p>
+</div></section>
+
+<section><div class="wrap">
+<h2>What it catches</h2>
+<div class="grid">
+<div class="card"><h3>Build-time errors</h3><p>Unknown tables and columns, literals that do not fit the type, writes that miss the primary key, ranges on partition keys, UDT fields that do not exist. Each diagnostic has a stable code, a location and a hint.</p></div>
+<div class="card"><h3>Cassandra-aware warnings</h3><p>Queries that do not restrict the partition key (<code>CQL201</code>), use <code>ALLOW FILTERING</code> (<code>CQL202</code>), restrict non-key columns (<code>CQL203</code>), skip a clustering column (<code>CQL204</code>) or order against the clustering order (<code>CQL205</code>).</p></div>
+<div class="card"><h3>Exact types</h3><p>Null and absent values stay separate. UDTs become structs, lightweight transactions return an <code>applied</code> outcome, large results stream.</p></div>
+<div class="card"><h3>Deterministic and offline</h3><p>Same input, same output. CI verifies it with <code>cqlc generate --check</code> and <code>cqlc check --deny-warnings</code>.</p></div>
+</div>
+</div></section>
+
+<section><div class="wrap">
+<h2>In the family</h2>
+<p class="sub">The <code>cqlc-core</code> crate (lexer, parser, schema resolver, type checker, typed IR) is the shared foundation of the family. <a href="cqlx.html">cqlx</a> verifies its generated DDL with it; <a href="cql-ai.html">cql-ai</a> uses its lexer as a tokenizer and its analyzer to label training data. Front-end speed is on the <a href="benchmarks.html">benchmarks</a> page.</p>
+</div></section>
+
+</main>
+<footer><div class="wrap">
+<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a>. Apache-2.0.</span>
+<span>Built by <a href="https://github.com/Max-imalgutaussehend">Max-imalgutaussehend</a></span>
+</div></footer>
+</body>
+</html>

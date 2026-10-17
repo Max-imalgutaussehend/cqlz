@@ -1,0 +1,61 @@
+cqlz: typesafe tools for Cassandra and ScyllaDB in Rust
+---
+The cqlz family: cqlc (schema-first codegen), cqlx (code-first ORM) and cql-ai (neural anti-pattern detector) for Cassandra and ScyllaDB.
+---
+<div class="wrap hero">
+<h1>Typesafe CQL.<br>From schema, from code, from <b>data</b>.</h1>
+<p class="lead">Three small Rust tools that move mistakes in Cassandra and ScyllaDB queries from production to compile time and CI. Pick the direction that fits your project; they share one parser.</p>
+<div class="btns">
+<a class="btn primary" href="cqlc.html">Start with cqlc</a>
+<a class="btn" href="cqlx.html">cqlx ORM</a>
+<a class="btn" href="cql-ai.html">cql-ai linter</a>
+<a class="btn" href="benchmarks.html">Benchmarks</a>
+</div>
+</div>
+
+<section><div class="wrap">
+<h2>The family</h2>
+<p class="sub">Same goal, three entry points. All three build on the ScyllaDB Rust driver and speak plain CQL.</p>
+<div class="grid">
+<div class="card"><span class="tag">Schema-first</span><h3>cqlc</h3>
+<p>Write <code>.cql</code> schema and named queries. cqlc type-checks them offline and generates typed async Rust, like <a href="https://sqlc.dev">sqlc</a> for Cassandra.</p>
+<a class="more" href="cqlc.html">Read more →</a></div>
+<div class="card"><span class="tag">Code-first</span><h3>cqlx</h3>
+<p>Write a Rust struct. <code>#[derive(CqlEntity)]</code> generates the table, inserts and a type-state query builder that cannot forget a partition key.</p>
+<a class="more" href="cqlx.html">Read more →</a></div>
+<div class="card"><span class="tag">Analysis</span><h3>cql-ai</h3>
+<p>A 0.6M-parameter Transformer over cqlc lexer tokens that flags anti-patterns in CI with probabilities, in milliseconds.</p>
+<a class="more" href="cql-ai.html">Read more →</a></div>
+</div>
+</div></section>
+
+<section><div class="wrap">
+<h2>How they fit together</h2>
+<div class="diagram">
+<div class="node"><b>.cql files</b>schema + queries</div><div class="arrow">→</div>
+<div class="node"><b>cqlc-core</b>lexer, parser, resolver, type checker</div><div class="arrow">→</div>
+<div class="node"><b>cqlc</b>typed Rust code</div>
+</div>
+<div class="diagram">
+<div class="node"><b>Rust structs</b>#[derive(CqlEntity)]</div><div class="arrow">→</div>
+<div class="node"><b>cqlx</b>type-state builders, <code>CREATE TABLE</code></div><div class="arrow">→</div>
+<div class="node"><b>cqlx schema</b>CQL checked by cqlc-core</div>
+</div>
+<div class="diagram">
+<div class="node"><b>.cql files</b>queries in your repo</div><div class="arrow">→</div>
+<div class="node"><b>cqlc-core lexer</b>fixed integer ids</div><div class="arrow">→</div>
+<div class="node"><b>cql-ai</b>Transformer, CI warnings</div>
+</div>
+<p class="sub">cqlc-core is the shared foundation: cqlx's CLI parses existing schemas with it and verifies generated DDL against it, and cql-ai uses its lexer as the tokenizer and its analyzer as the source of training labels.</p>
+</div></section>
+
+<section><div class="wrap">
+<h2>Which one do I use?</h2>
+<table>
+<tr><th>If you…</th><th>use</th></tr>
+<tr><td>already own the schema and want your queries checked and typed before they run</td><td><a href="cqlc.html">cqlc</a></td></tr>
+<tr><td>prefer Rust structs as the source of truth and want inserts and reads without writing CQL</td><td><a href="cqlx.html">cqlx</a></td></tr>
+<tr><td>want a fast CI gate that warns about full scans, <code>ALLOW FILTERING</code> and collection overwrites</td><td><a href="cql-ai.html">cql-ai</a></td></tr>
+<tr><td>want numbers</td><td><a href="benchmarks.html">benchmarks</a></td></tr>
+</table>
+</div></section>
