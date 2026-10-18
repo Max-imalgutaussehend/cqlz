@@ -3,7 +3,7 @@ cqlc: static CQL analyzer and Rust code generator
 cqlc type-checks CQL schema and queries offline and generates typed async Rust on the ScyllaDB driver.
 ---
 <div class="hero left"><div class="split">
-<img class="logo" src="logo.png" alt="cqlc logo: an orange crab with the Cassandra eye">
+<img class="logo" src="logos/cqlc.png" alt="cqlc logo: the Rust crab with the Cassandra eye">
 <div>
 <h1>cql<b>c</b></h1>
 <p class="lead">A static CQL analyzer and Rust code generator for Cassandra-compatible databases, in the spirit of sqlc. Schema-first, offline, deterministic.</p>
@@ -42,6 +42,27 @@ cqlc generate    <span class="c"># writes src/queries.rs</span></code></pre>
 <div class="card"><h3>Exact types</h3><p>Null and absent values stay separate. UDTs become structs, lightweight transactions return an <code>applied</code> outcome, large results stream.</p></div>
 <div class="card"><h3>Deterministic and offline</h3><p>Same input, same output. CI verifies it with <code>cqlc generate --check</code> and <code>cqlc check --deny-warnings</code>.</p></div>
 </div>
+</div></section>
+
+<section><div class="wrap">
+<div class="eyebrow">Cassandra 4.0, 4.1 and 5.0</div>
+<h2>Current Cassandra CQL, checked offline</h2>
+<p class="sub">cqlc 1.1 understands the CQL that real Cassandra projects use today. The reference is the ANTLR grammar and the native function classes of apache/cassandra (branches 4.0, 4.1, 5.0 and trunk), and the generated code runs against a real Cassandra 5.0 in CI.</p>
+<table>
+<tr><th>Version</th><th>What cqlc covers</th></tr>
+<tr><td>3.x</td><td>the complete data-plane subset: tables, UDTs, collections, counters, LWT, <code>token()</code>, tuple relations</td></tr>
+<tr><td>4.0 / 4.1</td><td>arithmetic (<code>+ - * / %</code>) with Cassandra's result types, duration literals (<code>1d</code>, <code>3h30m</code>), <code>ALTER</code>/<code>DROP</code>, materialized views, user-defined functions and aggregates</td></tr>
+<tr><td>5.0</td><td><code>vector&lt;float, N&gt;</code> (generated as <code>Vec&lt;f32&gt;</code>), <code>ORDER BY … ANN OF</code> vector search, SAI indexes and their restriction rules, <code>similarity_*</code>, <code>maxwritetime</code>, math and collection functions, <code>MASKED WITH</code></td></tr>
+<tr><td>6.0 (alpha)</td><td><code>CHECK</code> constraints parsed; transactions not yet</td></tr>
+</table>
+<pre><code><span class="c">-- schema</span>
+<span class="k">CREATE TABLE</span> products (id uuid <span class="k">PRIMARY KEY</span>, name text, price double, embedding vector&lt;float, 3&gt;);
+<span class="k">CREATE INDEX ON</span> products (embedding) <span class="k">USING</span> <span class="s">'sai'</span>;
+
+<span class="c">-- name: SimilarProducts :many</span>
+<span class="k">SELECT</span> id, name, similarity_cosine(embedding, ?) <span class="k">AS</span> score
+<span class="k">FROM</span> products <span class="k">ORDER BY</span> embedding <span class="k">ANN OF</span> ? <span class="k">LIMIT</span> 3;</code></pre>
+<p class="sub">cqlc enforces the rules Cassandra enforces: an <code>ANN OF</code> query needs a SAI index on a vector column and a <code>LIMIT</code> of at most 1000; <code>timestamp - timestamp</code> does not exist and is an error. Not yet: <code>BEGIN BATCH</code>, Cassandra 6.0 transactions and named bind markers.</p>
 </div></section>
 
 <section><div class="wrap">

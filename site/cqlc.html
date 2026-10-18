@@ -6,23 +6,24 @@
 <title>cqlc: static CQL analyzer and Rust code generator</title>
 <meta name="description" content="cqlc type-checks CQL schema and queries offline and generates typed async Rust on the ScyllaDB driver.">
 <meta name="theme-color" content="#171010">
-<link rel="icon" href="logo.png">
+<link rel="icon" type="image/png" href="logos/favicon-cqlc.png">
+<link rel="apple-touch-icon" href="logos/icon-cqlc.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="topbar"><b>NEW</b> &nbsp;Real-world KillrVideo results, YCSB against cqlx and a learned schema designer &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
+<div class="topbar"><b>NEW</b> &nbsp;cqlc 1.1 for Cassandra 5, cqlx 1.0, CQL HPC bottleneck detection and an ILP-backed schema designer &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
 <header class="nav"><div class="wrap">
-<a class="brand" href="index.html">cql<b>z</b></a><a class="link" href="cqlc.html" aria-current="page">cqlc</a><a class="link" href="cqlx.html">cqlx</a><a class="link" href="cql-ai.html">cql-ai</a><a class="link" href="benchmarks.html">Benchmarks</a><a class="link" href="examples.html">Examples</a><a class="link" href="research.html">Research (alpha)</a>
+<a class="brand" href="index.html"><img src="logos/icon-cqlz.png" alt="" width="34" height="34">cqlz <b>family</b></a><a class="link" href="cqlc.html" aria-current="page">cqlc</a><a class="link" href="cqlx.html">cqlx</a><a class="link" href="cql-ai.html">cql-ai</a><a class="link" href="cqlz-gym.html">cqlz-gym</a><a class="link" href="benchmarks.html">Benchmarks</a><a class="link" href="examples.html">Examples</a>
 <span class="spacer"></span>
 <a class="chip" href="https://github.com/Max-imalgutaussehend/cqlz">GitHub</a>
 <a class="chip cta" href="cqlc.html">Get started</a>
 </div></header>
 <main>
 <div class="hero left"><div class="split">
-<img class="logo" src="logo.png" alt="cqlc logo: an orange crab with the Cassandra eye">
+<img class="logo" src="logos/cqlc.png" alt="cqlc logo: the Rust crab with the Cassandra eye">
 <div>
 <h1>cql<b>c</b></h1>
 <p class="lead">A static CQL analyzer and Rust code generator for Cassandra-compatible databases, in the spirit of sqlc. Schema-first, offline, deterministic.</p>
@@ -64,13 +65,34 @@ cqlc generate    <span class="c"># writes src/queries.rs</span></code></pre>
 </div></section>
 
 <section><div class="wrap">
+<div class="eyebrow">Cassandra 4.0, 4.1 and 5.0</div>
+<h2>Current Cassandra CQL, checked offline</h2>
+<p class="sub">cqlc 1.1 understands the CQL that real Cassandra projects use today. The reference is the ANTLR grammar and the native function classes of apache/cassandra (branches 4.0, 4.1, 5.0 and trunk), and the generated code runs against a real Cassandra 5.0 in CI.</p>
+<table>
+<tr><th>Version</th><th>What cqlc covers</th></tr>
+<tr><td>3.x</td><td>the complete data-plane subset: tables, UDTs, collections, counters, LWT, <code>token()</code>, tuple relations</td></tr>
+<tr><td>4.0 / 4.1</td><td>arithmetic (<code>+ - * / %</code>) with Cassandra's result types, duration literals (<code>1d</code>, <code>3h30m</code>), <code>ALTER</code>/<code>DROP</code>, materialized views, user-defined functions and aggregates</td></tr>
+<tr><td>5.0</td><td><code>vector&lt;float, N&gt;</code> (generated as <code>Vec&lt;f32&gt;</code>), <code>ORDER BY … ANN OF</code> vector search, SAI indexes and their restriction rules, <code>similarity_*</code>, <code>maxwritetime</code>, math and collection functions, <code>MASKED WITH</code></td></tr>
+<tr><td>6.0 (alpha)</td><td><code>CHECK</code> constraints parsed; transactions not yet</td></tr>
+</table>
+<pre><code><span class="c">-- schema</span>
+<span class="k">CREATE TABLE</span> products (id uuid <span class="k">PRIMARY KEY</span>, name text, price double, embedding vector&lt;float, 3&gt;);
+<span class="k">CREATE INDEX ON</span> products (embedding) <span class="k">USING</span> <span class="s">'sai'</span>;
+
+<span class="c">-- name: SimilarProducts :many</span>
+<span class="k">SELECT</span> id, name, similarity_cosine(embedding, ?) <span class="k">AS</span> score
+<span class="k">FROM</span> products <span class="k">ORDER BY</span> embedding <span class="k">ANN OF</span> ? <span class="k">LIMIT</span> 3;</code></pre>
+<p class="sub">cqlc enforces the rules Cassandra enforces: an <code>ANN OF</code> query needs a SAI index on a vector column and a <code>LIMIT</code> of at most 1000; <code>timestamp - timestamp</code> does not exist and is an error. Not yet: <code>BEGIN BATCH</code>, Cassandra 6.0 transactions and named bind markers.</p>
+</div></section>
+
+<section><div class="wrap">
 <h2>In the family</h2>
 <p class="sub">The <code>cqlc-core</code> crate (lexer, parser, schema resolver, type checker, typed IR) is the shared foundation of the family. <a href="cqlx.html">cqlx</a> verifies its generated DDL with it; <a href="cql-ai.html">cql-ai</a> uses its lexer as a tokenizer and its analyzer to label training data. Front-end speed is on the <a href="benchmarks.html">benchmarks</a> page.</p>
 </div></section>
 
 </main>
 <footer><div class="wrap">
-<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="research.html">research</a>. Apache-2.0.</span>
+<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="cqlz-gym.html">cqlz-gym</a>. Apache-2.0.</span>
 <span>Built by <a href="https://github.com/Max-imalgutaussehend">Max-imalgutaussehend</a></span>
 </div></footer>
 </body>

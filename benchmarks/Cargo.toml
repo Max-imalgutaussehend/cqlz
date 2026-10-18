@@ -7,12 +7,12 @@ publish = false
 description = "Cross-project benchmarks for the cqlz family"
 
 [dependencies]
-cqlc-core = "1.0.1"
-cql-ai-model = { git = "https://github.com/Max-imalgutaussehend/cql-ai" }
+cqlc-core = "1.1"
+cql-ai-model = "0.2"
 burn = { version = "0.22", default-features = false, features = ["std", "flex"] }
 sqlparser = "0.63"
 
-cqlx = "0.1"
+cqlx = "1"
 scylla = "1.9"
 charybdis = "1.1"
 serde = { version = "1", features = ["derive"] }

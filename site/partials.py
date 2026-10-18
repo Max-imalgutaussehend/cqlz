@@ -7,10 +7,11 @@ PAGES = [
     ("cqlc.html", "cqlc"),
     ("cqlx.html", "cqlx"),
     ("cql-ai.html", "cql-ai"),
+    ("cqlz-gym.html", "cqlz-gym"),
     ("benchmarks.html", "Benchmarks"),
     ("examples.html", "Examples"),
-    ("research.html", "Research (alpha)"),
 ]
+ICONS = {"cqlc.html": "cqlc", "cqlx.html": "cqlx", "cql-ai.html": "cql-ai", "cqlz-gym.html": "cqlz-gym"}
 ALL = [("index.html", "Family")] + PAGES
 
 def page(slug, title, desc, body):
@@ -18,6 +19,7 @@ def page(slug, title, desc, body):
         f'<a class="link" href="{href}"{" aria-current=\"page\"" if href == slug else ""}>{label}</a>'
         for href, label in PAGES
     )
+    icon = ICONS.get(slug, "cqlz")
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -26,16 +28,17 @@ def page(slug, title, desc, body):
 <title>{title}</title>
 <meta name="description" content="{desc}">
 <meta name="theme-color" content="#171010">
-<link rel="icon" href="logo.png">
+<link rel="icon" type="image/png" href="logos/favicon-{icon}.png">
+<link rel="apple-touch-icon" href="logos/icon-{icon}.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="topbar"><b>NEW</b> &nbsp;Real-world KillrVideo results, YCSB against cqlx and a learned schema designer &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
+<div class="topbar"><b>NEW</b> &nbsp;cqlc 1.1 for Cassandra 5, cqlx 1.0, CQL HPC bottleneck detection and an ILP-backed schema designer &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
 <header class="nav"><div class="wrap">
-<a class="brand" href="index.html">cql<b>z</b></a>{nav}
+<a class="brand" href="index.html"><img src="logos/icon-cqlz.png" alt="" width="34" height="34">cqlz <b>family</b></a>{nav}
 <span class="spacer"></span>
 <a class="chip" href="https://github.com/Max-imalgutaussehend/cqlz">GitHub</a>
 <a class="chip cta" href="cqlc.html">Get started</a>
@@ -44,7 +47,7 @@ def page(slug, title, desc, body):
 {body}
 </main>
 <footer><div class="wrap">
-<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="research.html">research</a>. Apache-2.0.</span>
+<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="cqlz-gym.html">cqlz-gym</a>. Apache-2.0.</span>
 <span>Built by <a href="https://github.com/Max-imalgutaussehend">Max-imalgutaussehend</a></span>
 </div></footer>
 </body>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cqlz-gym: design Cassandra tables from a workload</title>
+<meta name="description" content="cqlz-gym designs denormalised Cassandra tables for a query workload with an exact ILP and a learned policy, and verifies every candidate with cqlc-core.">
+<meta name="theme-color" content="#171010">
+<link rel="icon" type="image/png" href="logos/favicon-cqlz-gym.png">
+<link rel="apple-touch-icon" href="logos/icon-cqlz-gym.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="topbar"><b>NEW</b> &nbsp;cqlc 1.1 for Cassandra 5, cqlx 1.0, CQL HPC bottleneck detection and an ILP-backed schema designer &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
+<header class="nav"><div class="wrap">
+<a class="brand" href="index.html"><img src="logos/icon-cqlz.png" alt="" width="34" height="34">cqlz <b>family</b></a><a class="link" href="cqlc.html">cqlc</a><a class="link" href="cqlx.html">cqlx</a><a class="link" href="cql-ai.html">cql-ai</a><a class="link" href="cqlz-gym.html" aria-current="page">cqlz-gym</a><a class="link" href="benchmarks.html">Benchmarks</a><a class="link" href="examples.html">Examples</a>
+<span class="spacer"></span>
+<a class="chip" href="https://github.com/Max-imalgutaussehend/cqlz">GitHub</a>
+<a class="chip cta" href="cqlc.html">Get started</a>
+</div></header>
+<main>
+<div class="hero left"><div class="split">
+<img class="logo" src="logos/cqlz-gym.png" alt="cqlz-gym logo: the Rust crab with a dumbbell badge">
+<div>
+<h1>cqlz<b>-gym</b></h1>
+<p class="lead">Give it entities and a weighted query workload, get the Cassandra tables. An integer program and a small learned policy search for the design, <code>cqlc-core</code> verifies every candidate, and a calibrated cost model scores it.</p>
+<div class="btns"><a class="btn primary" href="https://github.com/Max-imalgutaussehend/cqlz-lab">GitHub</a><a class="btn" href="https://crates.io/crates/cqlz-gym">crates.io</a><a class="btn" href="https://huggingface.co/Max-imumlikelihood/cqlz-gym-policy">Policy</a></div>
+<div class="install"><i>$</i> cargo install cqlz-gym</div>
+</div></div></div>
+
+<section class="first"><div class="wrap">
+<div class="eyebrow">How it works</div>
+<h2>Data modelling as a verified search</h2>
+<p class="sub">Cassandra data modelling means choosing denormalised tables so every query is a cheap single-partition read. The standard automated approach, NoSE (Mior, Salem, Aboulnaga, Liu, IEEE TKDE 2017), solves an integer program. cqlz-gym keeps that formulation as the exact baseline and adds a policy that builds the design step by step. After each step <code>cqlc-core</code> decides whether a query is valid and warning-free against the proposed schema; invalid actions are masked, so every proposed design is valid by construction and the reward needs no labelled data.</p>
+<div class="diagram">
+<div class="node"><b>Workload</b>entities + weighted queries (TOML)</div><div class="arrow">→</div>
+<div class="node"><b>Search</b>ILP, branch-and-bound, learned policy</div><div class="arrow">→</div>
+<div class="node"><b>cqlc-core</b>exact validity + action mask</div><div class="arrow">→</div>
+<div class="node"><b>Cost model</b>calibrated on measurements</div><div class="arrow">→</div>
+<div class="node"><b>Design</b><code>schema.cql</code>, <code>queries.cql</code>, <code>entities.rs</code></div>
+</div>
+<pre><code><span class="c"># design tables, print verified CQL, write files for cqlc (schema.cql, queries.cql) and cqlx (entities.rs)</span>
+cqlz-gym solve shop.toml --policy hf --emit out/
+
+<span class="c"># load naive, greedy and best design into a real ScyllaDB and measure the workload mix</span>
+cqlz-gym validate shop.toml --node 127.0.0.1:9042</code></pre>
+</div></section>
+
+<section><div class="wrap">
+<div class="eyebrow">Results</div>
+<h2>Against an exact integer program</h2>
+<div class="chart">
+<div class="title">80–150-query workloads: cost relative to the best design (lower is better)</div>
+<div class="row"><div class="lab">greedy</div><div class="track"><div class="bar" style="width:100%"></div></div><div class="val">1.117</div></div>
+<div class="row"><div class="lab">exact B&amp;B (15 s limit)</div><div class="track"><div class="bar" style="width:67%"></div></div><div class="val">1.078</div></div>
+<div class="row"><div class="lab">naive</div><div class="track"><div class="bar" style="width:39%"></div></div><div class="val">1.044</div></div>
+<div class="row"><div class="lab">learned policy</div><div class="track"><div class="bar" style="width:5%;min-width:3px"></div></div><div class="val">1.006</div></div>
+<div class="row hl"><div class="lab">ILP (MILP)</div><div class="track"><div class="bar" style="width:0%;min-width:3px"></div></div><div class="val">1.000</div></div>
+<div class="cap">Bars start at 1.000. The ILP solved all 8 instances to optimality in under 10 ms; the branch-and-bound solved none within 15 s; the policy needs 0.16 s per rollout.</div>
+</div>
+<table>
+<tr><th>Workload size</th><th class="num">greedy</th><th class="num">B&amp;B</th><th class="num">ILP</th><th class="num">learned</th><th class="num">B&amp;B solved</th><th class="num">ILP solved</th></tr>
+<tr><td>4–7 queries</td><td class="num">1.095</td><td class="num">1.000</td><td class="num">1.000</td><td class="num">1.000</td><td class="num">8/8</td><td class="num">8/8</td></tr>
+<tr><td>8–16 queries</td><td class="num">1.009</td><td class="num">1.000</td><td class="num">1.000</td><td class="num">1.003</td><td class="num">8/8</td><td class="num">8/8</td></tr>
+<tr><td>25–50 queries</td><td class="num">1.054</td><td class="num">1.001</td><td class="num">1.000</td><td class="num">1.005</td><td class="num">7/8</td><td class="num">8/8</td></tr>
+<tr class="hl"><td>80–150 queries</td><td class="num">1.117</td><td class="num">1.078</td><td class="num">1.000</td><td class="num">1.006</td><td class="num">0/8</td><td class="num">8/8</td></tr>
+</table>
+<div class="note"><b>The honest result:</b> an integer-programming solver is the right tool at these sizes. It finds the optimum in milliseconds, so the learned policy is a fast approximation within 0.6 %, never better. An earlier version of this page showed the policy beating an exact solver; that exact solver was a weak branch-and-bound, and the comparison was unfair.</div>
+</div></section>
+
+<section><div class="wrap">
+<div class="eyebrow">Real workloads</div>
+<h2>Designs for domain workloads</h2>
+<p class="sub"><code>cqlz-gym validate</code> loads the naive, greedy and best design into a real ScyllaDB (Docker, one node, 10,000 rows per entity, 32 clients, 6 s per design) and measures the workload mix. The three workloads are modelled on DataStax data-modelling examples (sensors, shopping) and KillrVideo.</p>
+<table>
+<tr><th>Workload</th><th>Tables naive → best</th><th class="num">Model-predicted cost</th><th class="num">Measured ops/s</th><th class="num">Weighted latency</th></tr>
+<tr class="hl"><td>sensors</td><td>6 → 5</td><td class="num">−23 %</td><td class="num">+8.2 %</td><td class="num">726 → 671 µs</td></tr>
+<tr><td>shop</td><td>7 → 6</td><td class="num">−5 %</td><td class="num">+1.4 %</td><td class="num">572 → 564 µs</td></tr>
+<tr><td>killrvideo</td><td>7 → 7</td><td class="num">0</td><td class="num">noise</td><td class="num">473 vs 486 µs</td></tr>
+</table>
+<div class="note">The direction of the model is right and its gain is overstated (−23 % predicted, −7.6 % latency measured). Run-to-run noise is a few percent on a laptop with Docker, so only the sensors result is clearly outside it. Where the best design equals the naive one (killrvideo), the differences between rows are noise.</div>
+</div></section>
+
+<section><div class="wrap">
+<div class="eyebrow">Environment speed</div>
+<h2>Why this can be a gym</h2>
+<div class="chart">
+<div class="title">Environment steps per second, M3 (4 performance + 4 efficiency cores)</div>
+<div class="row"><div class="lab">1 thread</div><div class="track"><div class="bar" style="width:19%"></div></div><div class="val">383 k</div></div>
+<div class="row"><div class="lab">2 threads</div><div class="track"><div class="bar" style="width:36%"></div></div><div class="val">738 k</div></div>
+<div class="row"><div class="lab">4 threads</div><div class="track"><div class="bar" style="width:69%"></div></div><div class="val">1.40 M</div></div>
+<div class="row hl"><div class="lab">8 threads</div><div class="track"><div class="bar" style="width:100%"></div></div><div class="val">2.04 M</div></div>
+</div>
+<p class="sub">One <code>cqlc-core</code> verification takes 3.1 µs, and the scaling efficiency is 96 % on two, 91 % on four and 67 % on eight threads (the last four cores of an M3 are efficiency cores). The environment is cheap enough that the search, not the checking, is the cost.</p>
+</div></section>
+
+<section><div class="wrap">
+<div class="eyebrow">Limits</div>
+<h2>What to keep in mind</h2>
+<ul class="sub">
+<li>The model is simplified: one equality-restricted partition and at most one range column per query, independent entities, no secondary indexes, materialised views or LWT; at most 256 candidate tables.</li>
+<li>The cost model is calibrated on measurements from the cql-ai dataset (seek, per-row and per-write cost), but it is still a model. A policy can exploit its errors, so check final designs with <code>cqlz-gym validate</code> on a real ScyllaDB.</li>
+<li>Learned search matters at large workloads; at small sizes the exact solvers win or tie and the policy adds nothing.</li>
+<li>Related work: neural combinatorial optimisation (Bello et al., 2016; Kool, van Hoof, Welling, ICLR 2019), Brax (Freeman et al., 2021) for making the environment the scalable part, and RL for <a href="https://arxiv.org/pdf/2006.08842">NoSQL index selection</a> and <a href="https://arxiv.org/pdf/2109.00136">relational schemas</a>. We found none for Cassandra schema design; that rests on a handful of searches, not a literature review.</li>
+</ul>
+</div></section>
+
+</main>
+<footer><div class="wrap">
+<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="cqlz-gym.html">cqlz-gym</a>. Apache-2.0.</span>
+<span>Built by <a href="https://github.com/Max-imalgutaussehend">Max-imalgutaussehend</a></span>
+</div></footer>
+</body>
+</html>

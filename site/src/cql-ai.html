@@ -1,63 +1,88 @@
-cql-ai: neural anti-pattern detector for CQL
+cql-ai: CQL performance bottlenecks, predicted in CI
 ---
-A tiny Transformer over cqlc lexer tokens that flags Cassandra anti-patterns in CI with probabilities, in milliseconds.
+A tiny Transformer that predicts CQL performance bottlenecks from the statement and the shape of your data, trained on measurements of public Cassandra and ScyllaDB workloads.
 ---
-<div class="hero left">
-<h1>cql<b>-ai</b></h1>
-<p class="lead">A from-scratch, 0.6M-parameter Transformer that reads CQL as <a href="cqlc.html">cqlc</a> lexer tokens, not text, and warns about anti-patterns in your pull requests.</p>
-<div class="btns"><a class="btn primary" href="https://github.com/Max-imalgutaussehend/cql-ai">GitHub</a><a class="btn" href="https://huggingface.co/Max-imumlikelihood/cql-anti-pattern-transformer">Hugging Face</a><a class="btn" href="benchmarks.html">Benchmarks</a></div>
-</div>
+<div class="hero left"><div class="split">
+<img class="logo" src="logos/cql-ai.png" alt="cql-ai logo: the Rust crab with a neural-network badge">
+<div>
+<h1>cql-ai<br><b>CQL HPC</b></h1>
+<p class="lead">Type safety is not enough when your tables hold billions of rows. cql-ai reads your <code>.cql</code> files in CI and warns when a statement is likely to be a <em>performance</em> bottleneck on your data: large partitions, scatter-gather, tombstones, write amplification. Trained on measured latencies, not on rules.</p>
+<div class="btns"><a class="btn primary" href="https://github.com/Max-imalgutaussehend/cql-ai">GitHub</a><a class="btn" href="https://huggingface.co/Max-imumlikelihood/cql-hpc-bottleneck-transformer">Model</a><a class="btn" href="https://huggingface.co/datasets/Max-imumlikelihood/cql-hpc-bench">Dataset</a></div>
+<div class="install"><i>$</i> cargo install cql-ai-cli</div>
+</div></div></div>
 
-<section><div class="wrap">
-<h2>Compiler-style output</h2>
+<section class="first"><div class="wrap">
+<div class="eyebrow">In CI</div>
+<h2>A warning before it hurts production</h2>
 <pre><code>$ cql-ai check queries/ --schema schema/
-<span class="k">warning</span>: AI detects 97% probability of Missing Partition Key on line 4
-  <span class="s">--&gt;</span> queries/events.cql:4:1
-   |
- 4 | SELECT body FROM events WHERE tenant = ?
-   |
-   = help: partition key not fully restricted: the query can fan out across partitions
+<span class="k">warning</span>: AI predicts a large result bottleneck (100% confidence, about 40x the cost of a point read) on line 1
+ <span class="s">--&gt;</span> queries/events.cql:1:1
+  |
+1 | SELECT * FROM events WHERE part = ?
+  |
+  = help: cost is dominated by the number of rows/bytes returned: add a LIMIT, page, or project fewer columns
+  = note: data shape: 200 partitions x 10k rows per partition
 
-cql-ai: checked 12 statement(s) in 3 file(s), 1 warning(s)</code></pre>
+<span class="k">warning</span>: AI predicts a server scan bottleneck (100% confidence, about 22x the cost of a point read) on line 3
+ <span class="s">--&gt;</span> queries/events.cql:3:1
+  |
+3 | SELECT count(*) FROM events WHERE part = ?</code></pre>
+<p class="sub">A four-statement file checks in about 0.2 s wall clock, including process start. The same query is a problem on a 10,000-row partition and fine on a 10-row one, so you tell the model about your data with one comment above the table:</p>
+<pre><code><span class="c">-- hpc: partitions=200000 rows=10000 row_bytes=300</span>
+<span class="k">CREATE TABLE</span> events (part text, clust text, data text, <span class="k">PRIMARY KEY</span> ((part), clust));</code></pre>
 </div></section>
 
 <section><div class="wrap">
-<h2>No text tokenizer</h2>
-<p class="sub">Queries go through the cqlc-core lexer. Every token kind has a fixed id, keywords have their own ids, and identifiers become a role token (<code>COL_PK</code>, <code>COL_CK0</code>, <code>COL_SET</code>, …) from the schema, or one of 64 hash buckets. The vocabulary is about 240 ids.</p>
-<pre><code>SELECT body FROM events WHERE tenant = ? AND ts &gt; ?
-<span class="c">[CLS] SELECT COL_REG FROM TABLE_PK2 WHERE COL_PK = BIND AND COL_CK0 &gt; BIND</span></code></pre>
-<div class="note">The model needs the schema to know which columns are keys. <code>cql-ai check</code> reads <code>CREATE</code> statements from <code>--schema</code> or from the checked files and refuses to run without them.</div>
-<h3>Architecture</h3>
-<div class="diagram">
-<div class="node"><b>Embeddings</b>token + position, d=128</div><div class="arrow">→</div>
-<div class="node"><b>4 × encoder</b>4 heads, FFN 256, pre-norm, pad mask</div><div class="arrow">→</div>
-<div class="node"><b>Masked mean pool</b>LayerNorm</div><div class="arrow">→</div>
-<div class="node"><b>6 sigmoid outputs</b>multi-label</div>
-</div>
-<p class="sub">Built with <a href="https://burn.dev">Burn</a> 0.22; weights are plain safetensors (2.3 MB).</p>
-</div></section>
-
-<section><div class="wrap">
-<h2>What it detects</h2>
+<div class="eyebrow">What it predicts</div>
+<h2>Measured bottlenecks</h2>
 <table>
-<tr><th>Label</th><th>Meaning</th><th>Ground truth</th></tr>
-<tr><td><code>MissingPartitionKey</code></td><td>partition key not fully restricted</td><td>cqlc <code>CQL111</code>/<code>CQL201</code></td></tr>
-<tr><td><code>InefficientAllowFiltering</code></td><td><code>ALLOW FILTERING</code></td><td>cqlc <code>CQL202</code></td></tr>
-<tr><td><code>NonKeyRestriction</code></td><td>restriction on a non-key column</td><td>cqlc <code>CQL203</code></td></tr>
-<tr><td><code>ClusteringGap</code></td><td>clustering restriction skips a column</td><td>cqlc <code>CQL204</code></td></tr>
-<tr><td><code>OrderByMismatch</code></td><td><code>ORDER BY</code> against the clustering order</td><td>cqlc <code>CQL205</code></td></tr>
-<tr><td><code>LargeCollectionUpdate</code></td><td><code>UPDATE</code> overwrites a whole collection</td><td>rule in the data generator</td></tr>
+<tr><th>Label</th><th>Measured definition (relative to a baseline on the same table)</th></tr>
+<tr><td><code>LargeResult</code></td><td>read ≥ 3× a point read, returns ≥ 100 rows or 32 KiB, and <code>LIMIT 1</code> removes most of the cost</td></tr>
+<tr><td><code>ServerScan</code></td><td>read ≥ 3× a point read but returns almost nothing (<code>count</code>, filtering)</td></tr>
+<tr><td><code>FanOut</code></td><td>read ≥ 3× a point read touching many partitions (<code>IN</code>, token scans, indexes)</td></tr>
+<tr><td><code>TombstoneScan</code></td><td>≥ 2× slower than the same statement on a clean twin table (queue pattern)</td></tr>
+<tr><td><code>WriteCost</code></td><td>write ≥ 1.8× a plain insert (batches across partitions)</td></tr>
+<tr><td><code>LightweightTxn</code></td><td><code>IF NOT EXISTS</code> and friends pay a Paxos round trip</td></tr>
 </table>
-<p class="sub">Training data: 100,000 synthetic statements from a randomised AST-to-text generator over random schemas, labelled automatically by cqlc-core's analyzer. Validation uses schemas the model has never seen.</p>
-<div class="note">Honest limits: the model learns what cqlc's analyzer decides deterministically, plus one rule. It is a fast, fuzzy, schema-aware linter for partial queries, not a replacement for <code>cqlc check</code>, and it cannot see data distributions, so real hot-partition detection is out of scope.</div>
+<p class="sub">Plus a cost estimate: how many times a point read (or a plain insert) the statement is expected to cost. Labels come from running every training statement on a real database, with counterfactuals such as the same statement with <code>LIMIT 1</code> and on a clean twin table.</p>
 </div></section>
 
 <section><div class="wrap">
-<h2>Drop it into CI</h2>
-<pre><code><span class="c"># .github/workflows/cql-ai.yml</span>
-- uses: actions/cache@v4
-  with: { path: ~/.cache/cql-ai, key: cql-ai-model-v1 }
-- run: curl -fsSL https://github.com/Max-imalgutaussehend/cql-ai/releases/latest/download/cql-ai-x86_64-unknown-linux-gnu.tar.gz | sudo tar -xz -C /usr/local/bin cql-ai
-- run: cql-ai check queries/ --schema schema/ --deny-warnings</code></pre>
-<p class="sub">The model is fetched from Hugging Face once and cached in <code>~/.cache/cql-ai/</code>; the CLI statically links the pure-Rust CPU backend.</p>
+<div class="eyebrow">Results</div>
+<h2>Better than rules, and data shape is the difference</h2>
+<p class="sub">Model trained on ScyllaDB measurements only (1,597 statements). Macro-F1 over the labels present, on data the model never saw.</p>
+<div class="chart">
+<div class="title">Macro-F1 on unseen worlds (same workloads, other data shapes)</div>
+<div class="row hl"><div class="lab">model + data stats</div><div class="track"><div class="bar" style="width:85.5%"></div></div><div class="val">0.855</div></div>
+<div class="row"><div class="lab">model, no stats</div><div class="track"><div class="bar" style="width:68.3%"></div></div><div class="val">0.683</div></div>
+<div class="row"><div class="lab">keyword rules</div><div class="track"><div class="bar" style="width:55.7%"></div></div><div class="val">0.557</div></div>
+</div>
+<div class="chart">
+<div class="title">Macro-F1 on a different engine (trained on ScyllaDB, tested on Apache Cassandra 5.0)</div>
+<div class="row hl"><div class="lab">model + data stats</div><div class="track"><div class="bar" style="width:80.2%"></div></div><div class="val">0.802</div></div>
+<div class="row"><div class="lab">model, no stats</div><div class="track"><div class="bar" style="width:62.4%"></div></div><div class="val">0.624</div></div>
+<div class="row"><div class="lab">keyword rules</div><div class="track"><div class="bar" style="width:51.6%"></div></div><div class="val">0.516</div></div>
+</div>
+<table>
+<tr><th>Test set</th><th class="num">Statements</th><th class="num">Macro-F1</th><th class="num">Cost error (log10)</th><th class="num">Rank correlation</th></tr>
+<tr><td>unseen worlds</td><td class="num">631</td><td class="num">0.855</td><td class="num">0.135</td><td class="num">0.920</td></tr>
+<tr><td>unseen workload families (YCSB, KillrVideo comments)</td><td class="num">756</td><td class="num">0.889</td><td class="num">0.136</td><td class="num">0.891</td></tr>
+<tr><td>other engine (Cassandra 5.0)</td><td class="num">2,614</td><td class="num">0.802</td><td class="num">0.179</td><td class="num">0.848</td></tr>
+</table>
+<p class="sub">A cost error of 0.135 means the predicted slowdown is typically within a factor of 1.4 of the measured one. The weak spots are <code>WriteCost</code> (precision 0.5–0.6) and <code>TombstoneScan</code> on the other engine (precision 0.48).</p>
+</div></section>
+
+<section><div class="wrap">
+<div class="eyebrow">The data</div>
+<h2>Public workloads, measured</h2>
+<table>
+<tr><th>Workload shape</th><th>Source</th></tr>
+<tr><td>key-value, tabular, IoT time series</td><td><a href="https://github.com/nosqlbench/nosqlbench">NoSQLBench</a> baselines (Apache-2.0)</td></tr>
+<tr><td>blog posts, counters</td><td>cassandra-stress profiles from <a href="https://github.com/apache/cassandra">Apache Cassandra</a></td></tr>
+<tr><td>user table</td><td><a href="https://github.com/brianfrankcooper/YCSB">YCSB</a> core workloads</td></tr>
+<tr><td><code>cpu</code> time series</td><td><a href="https://github.com/timescale/tsbs">TSBS</a> layout</td></tr>
+<tr><td>comments</td><td><a href="https://github.com/KillrVideo/killrvideo-data">KillrVideo</a></td></tr>
+</table>
+<p class="sub">90 worlds per engine, from 10 to 400,000 partitions and from 1 to 60,000 rows per partition, plus tombstone-heavy and indexed variants: about 2,650 measured statements each on ScyllaDB and Cassandra 5.0. Published as <a href="https://huggingface.co/datasets/Max-imumlikelihood/cql-hpc-bench">cql-hpc-bench</a>.</p>
+<div class="note"><b>Limits, stated plainly.</b> All numbers come from one node in Docker on one Apple M3, so cluster effects are not in the data (ratios are relative, but another cluster can rank statements differently). A hot-key class was dropped: with all clients on one partition, throughput did not degrade on a single ScyllaDB node (ratio ≥ 0.9), so there was nothing to learn. Alternating deletes made reads faster on ScyllaDB; only the queue pattern (first 95 % of a partition deleted) shows a tombstone cost. Thresholds such as 3× are choices, documented in the repository. cql-ai does not replace <code>cqlc check</code>, which is exact and about 400× faster for the anti-patterns it knows; it answers a different question: how slow will this be on my data?</div>
 </div></section>

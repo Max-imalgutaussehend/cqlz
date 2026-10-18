@@ -6,14 +6,15 @@ The **cqlz family**: typesafe tools for Cassandra and ScyllaDB in Rust.
 |---|---|---|
 | [`cqlc`](https://github.com/Max-imalgutaussehend/cqlc) | schema-first | CQL files → typed Rust (like sqlc) |
 | [`cqlx`](https://github.com/Max-imalgutaussehend/cqlx) | code-first | Rust structs → schema + type-state query builders |
-| [`cql-ai`](https://github.com/Max-imalgutaussehend/cql-ai) | analysis | Neural anti-pattern detector for CI |
+| [`cql-ai`](https://github.com/Max-imalgutaussehend/cql-ai) | performance | CQL HPC: predicts performance bottlenecks in CI, trained on measured workloads |
+| [`cqlz-gym`](https://github.com/Max-imalgutaussehend/cqlz-lab) | design | Designs Cassandra tables for a workload (ILP + learned policy, verified by cqlc-core) |
 
 This repository holds the family website (`site/`, deployed with GitHub Pages) and the cross-project
 benchmarks (`benchmarks/`). Results are on the *Benchmarks* page of the site.
 
 ```sh
 cargo bench -p cqlz-benchmarks --bench frontend    # cqlc-core vs sqlparser
-cargo bench -p cqlz-benchmarks --bench inference   # cql-ai vs cqlc analysis
+cargo bench -p cqlz-benchmarks --bench inference   # cql-ai latency
 cargo run --release --bin token_stats              # sequence-length comparison
 ```
 

@@ -6,16 +6,17 @@
 <title>cqlz examples: KillrVideo, IoT telemetry and learned schema design</title>
 <meta name="description" content="Runnable example projects for the cqlz family: cqlc on the real KillrVideo schema, a cqlx IoT app, and cqlz-gym on domain workloads.">
 <meta name="theme-color" content="#171010">
-<link rel="icon" href="logo.png">
+<link rel="icon" type="image/png" href="logos/favicon-cqlz.png">
+<link rel="apple-touch-icon" href="logos/icon-cqlz.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="topbar"><b>NEW</b> &nbsp;Real-world KillrVideo results, YCSB against cqlx and a learned schema designer &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
+<div class="topbar"><b>NEW</b> &nbsp;cqlc 1.1 for Cassandra 5, cqlx 1.0, CQL HPC bottleneck detection and an ILP-backed schema designer &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
 <header class="nav"><div class="wrap">
-<a class="brand" href="index.html">cql<b>z</b></a><a class="link" href="cqlc.html">cqlc</a><a class="link" href="cqlx.html">cqlx</a><a class="link" href="cql-ai.html">cql-ai</a><a class="link" href="benchmarks.html">Benchmarks</a><a class="link" href="examples.html" aria-current="page">Examples</a><a class="link" href="research.html">Research (alpha)</a>
+<a class="brand" href="index.html"><img src="logos/icon-cqlz.png" alt="" width="34" height="34">cqlz <b>family</b></a><a class="link" href="cqlc.html">cqlc</a><a class="link" href="cqlx.html">cqlx</a><a class="link" href="cql-ai.html">cql-ai</a><a class="link" href="cqlz-gym.html">cqlz-gym</a><a class="link" href="benchmarks.html">Benchmarks</a><a class="link" href="examples.html" aria-current="page">Examples</a>
 <span class="spacer"></span>
 <a class="chip" href="https://github.com/Max-imalgutaussehend/cqlz">GitHub</a>
 <a class="chip cta" href="cqlc.html">Get started</a>
@@ -62,24 +63,24 @@ range query returned 10 rows</code></pre>
 </div></section>
 
 <section><div class="wrap">
-<div class="eyebrow">cqlz-gym, alpha</div>
-<h2>Learned table design on domain workloads</h2>
-<p class="sub">Three workloads modelled after KillrVideo's access patterns and two DataStax data-modeling-by-example domains (sensors, shopping cart and orders). They are hand-modelled workloads, not those projects' datasets. Costs use the synthetic cost model, so compare columns, not absolute numbers.</p>
+<div class="eyebrow">cqlz-gym</div>
+<h2>Table design on domain workloads</h2>
+<p class="sub">Three workloads modelled after KillrVideo's access patterns and two DataStax data-modeling-by-example domains (sensors, shopping cart and orders). They are hand-modelled workloads, not those projects' datasets. Each design was loaded into a real ScyllaDB and measured.</p>
 <table>
-<tr><th>Workload</th><th class="num">naive</th><th class="num">greedy</th><th class="num">exact B&amp;B</th><th class="num">learned policy</th><th class="num">tables</th></tr>
-<tr><td>KillrVideo (7 queries)</td><td class="num">4,494</td><td class="num">4,494</td><td class="num">4,494</td><td class="num">4,494</td><td class="num">7</td></tr>
-<tr class="hl"><td>Sensors (6 queries)</td><td class="num">119,541</td><td class="num">119,541</td><td class="num">91,907</td><td class="num">91,907</td><td class="num">5</td></tr>
-<tr class="hl"><td>Shop and carts (7 queries)</td><td class="num">28,032</td><td class="num">29,814</td><td class="num">26,540</td><td class="num">26,540</td><td class="num">6</td></tr>
+<tr><th>Workload</th><th>Tables naive → best</th><th class="num">Model cost, naive → best</th><th class="num">Measured ops/s</th></tr>
+<tr><td>KillrVideo (7 queries)</td><td>7 → 7</td><td class="num">3,542 → 3,542</td><td class="num">noise</td></tr>
+<tr class="hl"><td>Sensors (6 queries)</td><td>6 → 5</td><td class="num">118,704 → 91,195</td><td class="num">+8.2 %</td></tr>
+<tr><td>Shop and carts (7 queries)</td><td>7 → 6</td><td class="num">27,529 → 26,029</td><td class="num">+1.4 %</td></tr>
 </table>
-<p class="sub">Sensors: merging the two read patterns that share a partition key saves 23 % over one table per query. Shop: the learned design is 5 % cheaper than naive and 11 % cheaper than greedy, which opens eight tables. KillrVideo: there is nothing to merge, so every method agrees. On the tiny <code>examples/shop.toml</code> of the repository the policy misses a merge the exact solver finds; it was trained on larger workloads and pays off at scale.</p>
+<p class="sub">Sensors: merging the two read patterns that share a partition key saves 23 % in the model and 7.6 % latency on the real database. KillrVideo: there is nothing to merge, so every method agrees. <a href="cqlz-gym.html">More on cqlz-gym</a>.</p>
 <pre><code>cargo install cqlz-gym
-cqlz-gym solve examples/gym-workloads/sensors.toml --policy hf</code></pre>
+cqlz-gym solve examples/gym-workloads/sensors.toml --policy hf --emit out/</code></pre>
 <a class="btn" href="https://github.com/Max-imalgutaussehend/cqlz/tree/main/examples/gym-workloads">Workloads</a>
 </div></section>
 
 </main>
 <footer><div class="wrap">
-<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="research.html">research</a>. Apache-2.0.</span>
+<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="cqlz-gym.html">cqlz-gym</a>. Apache-2.0.</span>
 <span>Built by <a href="https://github.com/Max-imalgutaussehend">Max-imalgutaussehend</a></span>
 </div></footer>
 </body>

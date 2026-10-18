@@ -6,26 +6,29 @@
 <title>cqlx: code-first ORM for ScyllaDB and Cassandra</title>
 <meta name="description" content="cqlx derives tables, inserts and type-state query builders from Rust structs. Forgetting a partition key is a compile error.">
 <meta name="theme-color" content="#171010">
-<link rel="icon" href="logo.png">
+<link rel="icon" type="image/png" href="logos/favicon-cqlx.png">
+<link rel="apple-touch-icon" href="logos/icon-cqlx.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="topbar"><b>NEW</b> &nbsp;Real-world KillrVideo results, YCSB against cqlx and a learned schema designer &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
+<div class="topbar"><b>NEW</b> &nbsp;cqlc 1.1 for Cassandra 5, cqlx 1.0, CQL HPC bottleneck detection and an ILP-backed schema designer &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
 <header class="nav"><div class="wrap">
-<a class="brand" href="index.html">cql<b>z</b></a><a class="link" href="cqlc.html">cqlc</a><a class="link" href="cqlx.html" aria-current="page">cqlx</a><a class="link" href="cql-ai.html">cql-ai</a><a class="link" href="benchmarks.html">Benchmarks</a><a class="link" href="examples.html">Examples</a><a class="link" href="research.html">Research (alpha)</a>
+<a class="brand" href="index.html"><img src="logos/icon-cqlz.png" alt="" width="34" height="34">cqlz <b>family</b></a><a class="link" href="cqlc.html">cqlc</a><a class="link" href="cqlx.html" aria-current="page">cqlx</a><a class="link" href="cql-ai.html">cql-ai</a><a class="link" href="cqlz-gym.html">cqlz-gym</a><a class="link" href="benchmarks.html">Benchmarks</a><a class="link" href="examples.html">Examples</a>
 <span class="spacer"></span>
 <a class="chip" href="https://github.com/Max-imalgutaussehend/cqlz">GitHub</a>
 <a class="chip cta" href="cqlc.html">Get started</a>
 </div></header>
 <main>
-<div class="hero left">
+<div class="hero left"><div class="split">
+<img class="logo" src="logos/cqlx.png" alt="cqlx logo: the Rust crab with a derive-macro badge">
+<div>
 <h1>cql<b>x</b></h1>
 <p class="lead">A typesafe, zero-overhead, code-first ORM for ScyllaDB and Cassandra, built on procedural macros. The code-first counterpart to <a href="cqlc.html">cqlc</a>.</p>
 <div class="btns"><a class="btn primary" href="https://github.com/Max-imalgutaussehend/cqlx">GitHub</a><a class="btn" href="benchmarks.html">Benchmarks</a></div>
-</div>
+</div></div></div>
 
 <section><div class="wrap">
 <h2>A struct is the schema</h2>
@@ -64,17 +67,18 @@ session.insert(&amp;event).<span class="k">await</span>?;
 </div></section>
 
 <section><div class="wrap">
-<h2>Zero overhead by construction</h2>
-<p class="sub">Everything static is computed at compile time: the <code>SELECT</code> column list, the <code>INSERT</code> text and the <code>CREATE TABLE</code> text are <code>&amp;'static str</code> constants. At runtime a query only assembles <code>WHERE</code> restrictions and bind values, and statements are prepared once per session. <a href="benchmarks.html">See the numbers</a> against the raw driver and charybdis.</p>
-<h3>Attributes</h3>
+<div class="eyebrow">1.0</div>
+<h2>Production feature set</h2>
 <table>
-<tr><th>Where</th><th>Attribute</th><th>Meaning</th></tr>
-<tr><td>struct</td><td><code>table_name</code>, <code>keyspace</code></td><td>Defaults: snake_case struct name, no keyspace</td></tr>
-<tr><td>field</td><td><code>partition_key</code> / <code>primary_key</code></td><td>Partition key column; several make a composite key</td></tr>
-<tr><td>field</td><td><code>clustering_key(order = "asc"|"desc")</code></td><td>Clustering column, in declaration order</td></tr>
-<tr><td>field</td><td><code>rename</code></td><td>CQL column name (selected <code>AS field</code>)</td></tr>
-<tr><td>field</td><td><code>cql_type</code></td><td>Override the inferred CQL type</td></tr>
+<tr><th>Area</th><th>API</th></tr>
+<tr><td>Reads</td><td>type-state <code>query()</code>: partition keys (<code>=</code>/<code>_in</code>), clustering <code>_eq/_gt/_ge/_lt/_le/_in</code>, <code>limit</code>, <code>reverse</code>, <code>fetch</code>, <code>first</code>, <code>count</code>, <code>stream</code>, paging, per-query consistency</td></tr>
+<tr><td>Partial updates</td><td><code>update()</code> needs the full primary key and one assignment: <code>set_*</code>, <code>add_*</code>/<code>remove_*</code> for collections, <code>increment_*</code> for counters, <code>ttl</code>, <code>timestamp</code></td></tr>
+<tr><td>Lightweight transactions</td><td><code>insert_with(.. if_not_exists)</code>, <code>update().if_exists()</code>, <code>if_&lt;col&gt;_eq(..)</code> return whether the write was applied</td></tr>
+<tr><td>Batches and streaming</td><td><code>batch(Logged|Unlogged|Counter)</code>, <code>stream()</code> over millions of rows</td></tr>
+<tr><td>Schema</td><td><code>validate_schema</code> reports drift, <code>migrate</code> creates tables and adds columns, never drops or retypes</td></tr>
+<tr><td>Safety</td><td>no <code>fetch</code> without the partition key, no <code>update</code> without key and assignment, no <code>insert</code> into counter tables, non-key filters only after <code>allow_filtering()</code>: all compile errors</td></tr>
 </table>
+<p class="sub">The integration suite (inserts, partial updates, collections, counters, TTL, LWTs, batches, 1,000-row streaming, schema migration) runs against ScyllaDB, Apache Cassandra 5.0 and 4.1. Statements are rendered at compile time as <code>&amp;'static str</code> constants; at runtime a query only assembles restrictions and bind values. <a href="benchmarks.html">YCSB numbers against the raw driver and charybdis</a>.</p>
 </div></section>
 
 <section><div class="wrap">
@@ -87,7 +91,7 @@ cqlx diff src/ --schema schema.cql      <span class="c"># ALTER TABLE … ADD, p
 
 </main>
 <footer><div class="wrap">
-<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="research.html">research</a>. Apache-2.0.</span>
+<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="cqlz-gym.html">cqlz-gym</a>. Apache-2.0.</span>
 <span>Built by <a href="https://github.com/Max-imalgutaussehend">Max-imalgutaussehend</a></span>
 </div></footer>
 </body>

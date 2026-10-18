@@ -4,47 +4,53 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>cqlz: typesafe tooling for Cassandra and ScyllaDB</title>
-<meta name="description" content="The cqlz family: cqlc (schema-first codegen), cqlx (code-first ORM), cql-ai (neural anti-pattern detector) and alpha research for Cassandra and ScyllaDB, in Rust.">
+<meta name="description" content="The cqlz family: cqlc (schema-first codegen), cqlx (code-first ORM), cql-ai (CQL performance-bottleneck detector) and cqlz-gym (schema design with an exact verifier) for Cassandra and ScyllaDB, in Rust.">
 <meta name="theme-color" content="#171010">
-<link rel="icon" href="logo.png">
+<link rel="icon" type="image/png" href="logos/favicon-cqlz.png">
+<link rel="apple-touch-icon" href="logos/icon-cqlz.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="topbar"><b>NEW</b> &nbsp;Real-world KillrVideo results, YCSB against cqlx and a learned schema designer &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
+<div class="topbar"><b>NEW</b> &nbsp;cqlc 1.1 for Cassandra 5, cqlx 1.0, CQL HPC bottleneck detection and an ILP-backed schema designer &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
 <header class="nav"><div class="wrap">
-<a class="brand" href="index.html">cql<b>z</b></a><a class="link" href="cqlc.html">cqlc</a><a class="link" href="cqlx.html">cqlx</a><a class="link" href="cql-ai.html">cql-ai</a><a class="link" href="benchmarks.html">Benchmarks</a><a class="link" href="examples.html">Examples</a><a class="link" href="research.html">Research (alpha)</a>
+<a class="brand" href="index.html"><img src="logos/icon-cqlz.png" alt="" width="34" height="34">cqlz <b>family</b></a><a class="link" href="cqlc.html">cqlc</a><a class="link" href="cqlx.html">cqlx</a><a class="link" href="cql-ai.html">cql-ai</a><a class="link" href="cqlz-gym.html">cqlz-gym</a><a class="link" href="benchmarks.html">Benchmarks</a><a class="link" href="examples.html">Examples</a>
 <span class="spacer"></span>
 <a class="chip" href="https://github.com/Max-imalgutaussehend/cqlz">GitHub</a>
 <a class="chip cta" href="cqlc.html">Get started</a>
 </div></header>
 <main>
 <div class="hero">
+<img class="logo" src="logos/cqlz.png" alt="cqlz family logo: the Rust crab with the Cassandra eye" style="margin:0 auto 12px;display:block">
 <h1>Typesafe <b>CQL</b>.<br>Written in Rust.</h1>
-<p class="lead">Three small tools that move mistakes in Cassandra and ScyllaDB queries from production to compile time and CI. Pick the direction that fits your project; they share one parser.</p>
+<p class="lead">Four small tools that move mistakes and slowdowns in Cassandra and ScyllaDB queries from production to compile time and CI: typed, checked against current Cassandra, and measured for performance.</p>
 <div class="btns"><a class="btn primary" href="cqlc.html">Get started</a><a class="btn" href="benchmarks.html">Benchmarks</a><a class="btn" href="examples.html">Examples</a></div>
 <div class="install"><i>$</i> cargo install cqlc</div>
 </div>
 
 <section class="first"><div class="wrap">
 <div class="eyebrow">The family</div>
-<h2>Three entry points, one foundation</h2>
-<p class="sub">All three build on the ScyllaDB Rust driver and <code>cqlc-core</code>, the lexer, parser, schema resolver and type checker that checks every statement.</p>
+<h2>Four tools, one foundation</h2>
+<p class="sub">All of them build on the ScyllaDB Rust driver and <code>cqlc-core</code>, the lexer, parser, schema resolver and type checker that checks every statement.</p>
 <div class="grid">
 <div class="card"><span class="tag">Schema-first</span><h3>cqlc</h3>
-<p>Write <code>.cql</code> schema and named queries. cqlc type-checks them offline and generates typed async Rust, like sqlc for Cassandra.</p>
+<p>Write <code>.cql</code> schema and named queries. cqlc type-checks them offline against Cassandra 4.0 to 5.0 CQL (vectors, SAI, ANN search) and generates typed async Rust.</p>
 <div class="stat">3.8×<small>faster parsing than sqlparser on identical statements</small></div><br>
 <a class="more" href="cqlc.html">Read more →</a></div>
 <div class="card"><span class="tag">Code-first</span><h3>cqlx</h3>
 <p>Write a Rust struct. <code>#[derive(CqlEntity)]</code> generates the table, inserts and a type-state query builder that cannot forget a partition key.</p>
-<div class="stat">≈ 1.0×<small>of the raw driver on YCSB A, B and C</small></div><br>
+<div class="stat">95–97 %<small>of the raw driver on YCSB; 1.0 with partial updates, LWT, batches, streaming</small></div><br>
 <a class="more" href="cqlx.html">Read more →</a></div>
-<div class="card"><span class="tag">Analysis</span><h3>cql-ai</h3>
-<p>A 0.6M-parameter Transformer over cqlc lexer tokens that flags anti-patterns in CI with probabilities, in milliseconds.</p>
-<div class="stat">52 ms<small>wall clock for a 36-statement file, weights cached</small></div><br>
+<div class="card"><span class="tag">Performance</span><h3>cql-ai</h3>
+<p>A 0.6M-parameter Transformer that predicts performance bottlenecks from the statement and your data shape, trained on measured latencies of public workloads.</p>
+<div class="stat">0.86<small>macro-F1 on unseen data shapes; keyword rules reach 0.56</small></div><br>
 <a class="more" href="cql-ai.html">Read more →</a></div>
+<div class="card"><span class="tag">Design</span><h3>cqlz-gym</h3>
+<p>Give it entities and a query workload; it designs the Cassandra tables. An exact ILP and a small learned policy search, <code>cqlc-core</code> verifies every candidate.</p>
+<div class="stat">+8 %<small>+8 %SMALL</small></div><br>
+<a class="more" href="cqlz-gym.html">Read more →</a></div>
 </div>
 </div></section>
 
@@ -77,22 +83,17 @@
 <div class="node"><b>cqlc-core lexer</b>fixed integer ids</div><div class="arrow">→</div>
 <div class="node"><b>cql-ai</b>Transformer, CI warnings</div>
 </div>
-</div></section>
-
-<section><div class="wrap">
-<div class="eyebrow">Alpha research</div>
-<h2>Learned table design</h2>
-<p class="sub"><a href="research.html">cqlz-gym</a> designs Cassandra tables for a workload, with <code>cqlc-core</code> as the exact verifier and a small neural policy as the search. On 80–150-query workloads an exact baseline never finishes while the policy lands within 0.2 % of the best known design in 0.3 s. Alpha, with caveats.</p>
-<div class="stats">
-<div><div class="stat">0.3 s<small>policy, 80–150 queries</small></div></div>
-<div><div class="stat">0 / 8<small>exact solver finished in 15 s</small></div></div>
-<div><div class="stat">227k<small>environment steps/s per core</small></div></div>
+<div class="diagram">
+<div class="node"><b>entities + workload</b>TOML</div><div class="arrow">→</div>
+<div class="node"><b>cqlz-gym</b>ILP and learned policy, verified by cqlc-core</div><div class="arrow">→</div>
+<div class="node"><b>schema.cql</b>feeds cqlc and cqlx</div>
 </div>
 </div></section>
 
+
 </main>
 <footer><div class="wrap">
-<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="research.html">research</a>. Apache-2.0.</span>
+<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="cqlz-gym.html">cqlz-gym</a>. Apache-2.0.</span>
 <span>Built by <a href="https://github.com/Max-imalgutaussehend">Max-imalgutaussehend</a></span>
 </div></footer>
 </body>

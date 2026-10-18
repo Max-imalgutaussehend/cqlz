@@ -1608,8 +1608,7 @@ dependencies = [
 
 [[package]]
 name = "cql-ai-model"
-version = "0.1.0"
-source = "git+https://github.com/Max-imalgutaussehend/cql-ai#5d6dd5f516cc6d48f83df3c89def30d3e386c366"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "burn",
@@ -1620,28 +1619,30 @@ dependencies = [
 
 [[package]]
 name = "cqlc-core"
-version = "1.0.1"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "084c5b57aae27ecbc7e80d72ac0c3386614315417158fb3517722cc8bfd41c5b"
+checksum = "2279000de54fd4e0b584b296e32aa38ef56ba8883f1634d6c374440a0eb70d69"
 
 [[package]]
 name = "cqlx"
-version = "0.1.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5999f4d453d06ebf320425ecc4ec2626b9452a00266f44c4244526553ca23c85"
+checksum = "9511549165e632b5f10cc48edaccba2478622a4f52df64cf29532431368c2e44"
 dependencies = [
  "cqlx-core",
  "cqlx-macros",
+ "futures",
  "scylla",
 ]
 
 [[package]]
 name = "cqlx-core"
-version = "0.1.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ab44e1a01d1a3ea6506f40e39c80cbf335deac4130cff2832a3143b751f6b6c"
+checksum = "2017aa13aa7e96c9abd5a7d08a6b6ae9dbfdf8419ae5df9ae8af11864b5400b3"
 dependencies = [
  "async-trait",
+ "futures",
  "proc-macro2",
  "quote",
  "scylla",
@@ -1651,9 +1652,9 @@ dependencies = [
 
 [[package]]
 name = "cqlx-macros"
-version = "0.1.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b627120f49df7ef53429a947b4895d43315dc0fae5eccb647f1716983508416"
+checksum = "47042f3a13eb2241be4583bdb1144bb3b6be2bef632f2d620b32caa7b52e80e6"
 dependencies = [
  "cqlx-core",
  "proc-macro2",
