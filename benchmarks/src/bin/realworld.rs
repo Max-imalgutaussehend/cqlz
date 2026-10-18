@@ -4,20 +4,26 @@
 //!     cargo run --release --bin realworld -- <cql-ai model dir>
 
 use burn::prelude::*;
+use cql_ai_model::LABELS;
 use cql_ai_model::io::load;
 use cql_ai_model::model::batch_tokens;
 use cql_ai_model::tokenizer::{SchemaInfo, encode, statements};
-use cql_ai_model::LABELS;
 use cqlc_core::diagnostic::DiagnosticCode as C;
 use cqlc_core::{Input, compile};
 use std::collections::BTreeMap;
 
 fn split(src: &str) -> Vec<String> {
-    statements(src).into_iter().map(|s| src[s.range].to_string()).collect()
+    statements(src)
+        .into_iter()
+        .map(|s| src[s.range].to_string())
+        .collect()
 }
 
 fn first_word(s: &str) -> String {
-    s.split(|c: char| !c.is_ascii_alphabetic()).next().unwrap_or("").to_ascii_lowercase()
+    s.split(|c: char| !c.is_ascii_alphabetic())
+        .next()
+        .unwrap_or("")
+        .to_ascii_lowercase()
 }
 
 fn label_of(code: C) -> Option<usize> {
@@ -51,12 +57,20 @@ fn main() {
     };
     for v in ["v3", "v4", "v5"] {
         let src = std::fs::read_to_string(format!("{dir}/kv-schema-{v}.cql")).unwrap();
-        let tables: Vec<String> = split(&src).into_iter().filter(|s| first_word(s) == "create" && s.to_ascii_lowercase().contains("create table")).collect();
+        let tables: Vec<String> = split(&src)
+            .into_iter()
+            .filter(|s| {
+                first_word(s) == "create" && s.to_ascii_lowercase().contains("create table")
+            })
+            .collect();
         let mut ok = 0;
         let mut why: BTreeMap<String, usize> = BTreeMap::new();
         let mut good: Vec<String> = Vec::new();
         for t in &tables {
-            let c = compile(&[Input::new("s.cql", format!("{};", strip_default(t)))], &[]);
+            let c = compile(
+                &[Input::new("s.cql", format!("{};", strip_default(t)))],
+                &[],
+            );
             match c.diagnostics.iter().find(|d| d.is_error()) {
                 None => {
                     ok += 1;
@@ -65,8 +79,23 @@ fn main() {
                 Some(d) => *why.entry(d.message.chars().take(60).collect()).or_default() += 1,
             }
         }
-        let normalised = tables.iter().filter(|t| compile(&[Input::new("s.cql", format!("{};", strip_default(t)))], &[]).diagnostics.iter().all(|d| !d.is_error())).count();
-        println!("schema {v}: {ok}/{} CREATE TABLE statements accepted as published, {normalised}/{} after removing `DEFAULT` clauses", tables.len(), tables.len());
+        let normalised = tables
+            .iter()
+            .filter(|t| {
+                compile(
+                    &[Input::new("s.cql", format!("{};", strip_default(t)))],
+                    &[],
+                )
+                .diagnostics
+                .iter()
+                .all(|d| !d.is_error())
+            })
+            .count();
+        println!(
+            "schema {v}: {ok}/{} CREATE TABLE statements accepted as published, {normalised}/{} after removing `DEFAULT` clauses",
+            tables.len(),
+            tables.len()
+        );
         for (m, n) in why.iter().take(3) {
             println!("    rejected x{n}: {m}");
         }
@@ -77,7 +106,9 @@ fn main() {
 
     println!("\n== query examples (v4) against the accepted v4 tables ==");
     let schema_text = accepted_ddl.join("\n").replace("killrvideo.", "");
-    let qsrc = std::fs::read_to_string(format!("{dir}/kv-schema-v4-query-examples.cql")).unwrap().replace("killrvideo.", "");
+    let qsrc = std::fs::read_to_string(format!("{dir}/kv-schema-v4-query-examples.cql"))
+        .unwrap()
+        .replace("killrvideo.", "");
     // `sample_uuid('x')` is a helper UDF defined by the repo's data script; use a literal so the statement can be analysed.
     let qsrc = {
         let mut out = String::new();
@@ -91,12 +122,33 @@ fn main() {
         out.push_str(rest);
         out
     };
-    let queries: Vec<String> = split(&qsrc).into_iter().filter(|s| matches!(first_word(s).as_str(), "select" | "insert" | "update" | "delete")).collect();
+    let queries: Vec<String> = split(&qsrc)
+        .into_iter()
+        .filter(|s| {
+            matches!(
+                first_word(s).as_str(),
+                "select" | "insert" | "update" | "delete"
+            )
+        })
+        .collect();
     let info = SchemaInfo::from_ddl(&schema_text);
     let mut analysable: Vec<(String, [bool; 5])> = Vec::new();
     let mut outcome: BTreeMap<&str, usize> = BTreeMap::new();
     for q in &queries {
-        let c = compile(&[Input::new("s.cql", schema_text.clone())], &[Input::new("q.cql", format!("-- name: Q :{}\n{q};", if first_word(q) == "select" { "many" } else { "exec" }))]);
+        let c = compile(
+            &[Input::new("s.cql", schema_text.clone())],
+            &[Input::new(
+                "q.cql",
+                format!(
+                    "-- name: Q :{}\n{q};",
+                    if first_word(q) == "select" {
+                        "many"
+                    } else {
+                        "exec"
+                    }
+                ),
+            )],
+        );
         let mut labels = [false; 5];
         let mut blocked = false;
         for d in &c.diagnostics {
@@ -108,9 +160,19 @@ fn main() {
         }
         if blocked {
             if std::env::var_os("VERBOSE").is_some() {
-                println!("  blocked: {} :: {}", q.lines().next().unwrap_or(""), c.diagnostics.iter().find(|d| d.is_error()).map(|d| d.message.clone()).unwrap_or_default());
+                println!(
+                    "  blocked: {} :: {}",
+                    q.lines().next().unwrap_or(""),
+                    c.diagnostics
+                        .iter()
+                        .find(|d| d.is_error())
+                        .map(|d| d.message.clone())
+                        .unwrap_or_default()
+                );
             }
-            *outcome.entry("cqlc cannot analyse (unsupported or invalid for the accepted schema)").or_default() += 1;
+            *outcome
+                .entry("cqlc cannot analyse (unsupported or invalid for the accepted schema)")
+                .or_default() += 1;
         } else if labels.iter().any(|&b| b) {
             *outcome.entry("analysed, anti-pattern flagged").or_default() += 1;
             analysable.push((q.clone(), labels));
@@ -129,7 +191,11 @@ fn main() {
         let (net, _) = load(std::path::Path::new(&d), &device).unwrap();
         let ids: Vec<Vec<u32>> = analysable.iter().map(|(q, _)| encode(q, &info)).collect();
         let seqs: Vec<&[u32]> = ids.iter().map(Vec::as_slice).collect();
-        let probs = net.predict(batch_tokens(&seqs, &device)).into_data().try_to_vec::<f32>().unwrap();
+        let probs = net
+            .predict(batch_tokens(&seqs, &device))
+            .into_data()
+            .try_to_vec::<f32>()
+            .unwrap();
         let (mut tp, mut fp, mut fneg, mut exact) = ([0; 5], [0; 5], [0; 5], 0);
         for (i, (_, truth)) in analysable.iter().enumerate() {
             let mut all = true;
@@ -145,10 +211,16 @@ fn main() {
             }
             exact += usize::from(all);
         }
-        println!("\n== cql-ai vs cqlc on the {} analysable real statements (labels 0-4) ==", analysable.len());
+        println!(
+            "\n== cql-ai vs cqlc on the {} analysable real statements (labels 0-4) ==",
+            analysable.len()
+        );
         println!("exact label-set agreement: {}/{}", exact, analysable.len());
         for c in 0..5 {
-            println!("  {:<28} tp {:>2}  fp {:>2}  fn {:>2}", LABELS[c], tp[c], fp[c], fneg[c]);
+            println!(
+                "  {:<28} tp {:>2}  fp {:>2}  fn {:>2}",
+                LABELS[c], tp[c], fp[c], fneg[c]
+            );
         }
     }
 }

@@ -73,17 +73,43 @@ struct UserC {
 
 fn payload(seed: u64) -> String {
     let mut r = StdRng::seed_from_u64(seed);
-    (0..100).map(|_| char::from(b'a' + r.random_range(0..26))).collect()
+    (0..100)
+        .map(|_| char::from(b'a' + r.random_range(0..26)))
+        .collect()
 }
 
 fn userx(key: String, seed: u64) -> UserX {
     let p = payload(seed);
-    UserX { ycsb_key: key, field0: p.clone(), field1: p.clone(), field2: p.clone(), field3: p.clone(), field4: p.clone(), field5: p.clone(), field6: p.clone(), field7: p.clone(), field8: p.clone(), field9: p }
+    UserX {
+        ycsb_key: key,
+        field0: p.clone(),
+        field1: p.clone(),
+        field2: p.clone(),
+        field3: p.clone(),
+        field4: p.clone(),
+        field5: p.clone(),
+        field6: p.clone(),
+        field7: p.clone(),
+        field8: p.clone(),
+        field9: p,
+    }
 }
 
 fn userc(key: String, seed: u64) -> UserC {
     let p = payload(seed);
-    UserC { ycsb_key: key, field0: p.clone(), field1: p.clone(), field2: p.clone(), field3: p.clone(), field4: p.clone(), field5: p.clone(), field6: p.clone(), field7: p.clone(), field8: p.clone(), field9: p }
+    UserC {
+        ycsb_key: key,
+        field0: p.clone(),
+        field1: p.clone(),
+        field2: p.clone(),
+        field3: p.clone(),
+        field4: p.clone(),
+        field5: p.clone(),
+        field6: p.clone(),
+        field7: p.clone(),
+        field8: p.clone(),
+        field9: p,
+    }
 }
 
 struct Stats {
@@ -94,7 +120,14 @@ struct Stats {
 }
 
 /// Closed-loop driver: `tasks` workers draw Zipfian keys, do a read with probability `read_frac`, else a write.
-async fn drive<R, RF, W, WF>(tasks: usize, secs: u64, records: u64, read_frac: f64, read: Arc<R>, write: Arc<W>) -> Stats
+async fn drive<R, RF, W, WF>(
+    tasks: usize,
+    secs: u64,
+    records: u64,
+    read_frac: f64,
+    read: Arc<R>,
+    write: Arc<W>,
+) -> Stats
 where
     R: Fn(String) -> RF + Send + Sync + 'static,
     RF: Future<Output = ()> + Send,
@@ -132,26 +165,50 @@ where
         ops += n;
         all.add(h).unwrap();
     }
-    Stats { ops, secs: start.elapsed().as_secs_f64(), p50: all.value_at_quantile(0.5), p99: all.value_at_quantile(0.99) }
+    Stats {
+        ops,
+        secs: start.elapsed().as_secs_f64(),
+        p50: all.value_at_quantile(0.5),
+        p99: all.value_at_quantile(0.99),
+    }
 }
 
 async fn start() -> (ContainerAsync<GenericImage>, String) {
     let c = GenericImage::new("scylladb/scylla", "latest")
         .with_exposed_port(9042.tcp())
         .with_wait_for(WaitFor::message_on_stderr("serving"))
-        .with_cmd(["--smp", "2", "--memory", "1500M", "--overprovisioned", "1", "--developer-mode", "1"])
+        .with_cmd([
+            "--smp",
+            "2",
+            "--memory",
+            "1500M",
+            "--overprovisioned",
+            "1",
+            "--developer-mode",
+            "1",
+        ])
         .with_startup_timeout(Duration::from_secs(240))
         .start()
         .await
         .unwrap();
-    let node = format!("{}:{}", c.get_host().await.unwrap(), c.get_host_port_ipv4(9042).await.unwrap());
+    let node = format!(
+        "{}:{}",
+        c.get_host().await.unwrap(),
+        c.get_host_port_ipv4(9042).await.unwrap()
+    );
     (c, node)
 }
 
 #[tokio::main]
 async fn main() {
-    let records: u64 = std::env::args().nth(1).and_then(|s| s.parse().ok()).unwrap_or(50_000);
-    let secs: u64 = std::env::args().nth(2).and_then(|s| s.parse().ok()).unwrap_or(10);
+    let records: u64 = std::env::args()
+        .nth(1)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(50_000);
+    let secs: u64 = std::env::args()
+        .nth(2)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(10);
     let tasks = 64;
     let (container, node) = start().await;
     let mut session = None;
@@ -185,9 +242,16 @@ async fn main() {
     let raw_sel = session.driver().prepare("SELECT ycsb_key, field0, field1, field2, field3, field4, field5, field6, field7, field8, field9 FROM ycsb.usertable WHERE ycsb_key = ?").await.unwrap();
     let raw_ins = session.driver().prepare("INSERT INTO ycsb.usertable (ycsb_key, field0, field1, field2, field3, field4, field5, field6, field7, field8, field9) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").await.unwrap();
     let charybdis_session = {
-        let inner = Session::connect_single_node(&node).await.unwrap().try_into_driver().ok().unwrap();
+        let inner = Session::connect_single_node(&node)
+            .await
+            .unwrap()
+            .try_into_driver()
+            .ok()
+            .unwrap();
         inner.use_keyspace("ycsb", false).await.unwrap();
-        Arc::new(cqlx::scylla::client::caching_session::CachingSession::from(inner, 100))
+        Arc::new(cqlx::scylla::client::caching_session::CachingSession::from(
+            inner, 100,
+        ))
     };
     let session = Arc::new(session);
     let raw_sel = Arc::new(raw_sel);
@@ -220,7 +284,12 @@ async fn main() {
         print_row(wl, "cqlx", &st);
 
         // raw driver
-        let (a, b, c1, c2) = (session.clone(), session.clone(), raw_sel.clone(), raw_ins.clone());
+        let (a, b, c1, c2) = (
+            session.clone(),
+            session.clone(),
+            raw_sel.clone(),
+            raw_ins.clone(),
+        );
         let st = drive(
             tasks,
             secs,
@@ -230,14 +299,28 @@ async fn main() {
                 let (s, p) = (a.clone(), c1.clone());
                 async move {
                     let r = s.driver().execute_unpaged(&p, (k,)).await.unwrap();
-                    let _ = r.into_rows_result().unwrap().rows::<RawRow>().unwrap().next();
+                    let _ = r
+                        .into_rows_result()
+                        .unwrap()
+                        .rows::<RawRow>()
+                        .unwrap()
+                        .next();
                 }
             }),
             Arc::new(move |k: String, seed: u64| {
                 let (s, p) = (b.clone(), c2.clone());
                 async move {
                     let u = userx(k, seed);
-                    s.driver().execute_unpaged(&p, (u.ycsb_key, u.field0, u.field1, u.field2, u.field3, u.field4, u.field5, u.field6, u.field7, u.field8, u.field9)).await.unwrap();
+                    s.driver()
+                        .execute_unpaged(
+                            &p,
+                            (
+                                u.ycsb_key, u.field0, u.field1, u.field2, u.field3, u.field4,
+                                u.field5, u.field6, u.field7, u.field8, u.field9,
+                            ),
+                        )
+                        .await
+                        .unwrap();
                 }
             }),
         )
@@ -254,7 +337,10 @@ async fn main() {
             Arc::new(move |k: String| {
                 let s = d.clone();
                 async move {
-                    let _ = UserC::find_by_primary_key_value((k,)).execute(&s).await.unwrap();
+                    let _ = UserC::find_by_primary_key_value((k,))
+                        .execute(&s)
+                        .await
+                        .unwrap();
                 }
             }),
             Arc::new(move |k: String, seed: u64| {
@@ -271,5 +357,11 @@ async fn main() {
 }
 
 fn print_row(wl: &str, name: &str, s: &Stats) {
-    println!("{wl},{name},{:.0},{},{},{}", s.ops as f64 / s.secs, s.p50, s.p99, s.ops);
+    println!(
+        "{wl},{name},{:.0},{},{},{}",
+        s.ops as f64 / s.secs,
+        s.p50,
+        s.p99,
+        s.ops
+    );
 }
