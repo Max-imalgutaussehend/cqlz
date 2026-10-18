@@ -127,3 +127,27 @@ footer a { color: var(--text); }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 table.score td:first-child { white-space: nowrap; font-weight: 600; }
 @media (max-width: 640px) { .chart.wide .row { grid-template-columns: 100px 1fr 120px; } .verdict { flex-direction: column; } }
+
+/* graphic panels */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); margin: 24px 0; }
+.tile { padding: 22px 20px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 -1px -1px 0; }
+.tile .n { font-size: clamp(30px, 4vw, 44px); font-weight: 600; line-height: 1; letter-spacing: -.02em; }
+.tile .n.win { color: var(--blue); } .tile .n.lose { color: var(--orange); } .tile .n.tie { color: var(--text); }
+.tile .t { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 10px; }
+.tile .b { margin-top: 10px; }
+.gfx { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin: 18px 0; }
+.panel { border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg2); padding: 18px 18px 14px; }
+.panel h4 { margin: 0 0 4px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.panel .one { font-size: 15px; margin: 0 0 6px; color: var(--text); }
+.panel svg { width: 100%; height: auto; display: block; }
+.panel.wide { grid-column: 1 / -1; }
+svg text { fill: var(--text); font-family: inherit; font-size: 12px; }
+svg .m { fill: var(--muted); } svg .big { font-size: 22px; font-weight: 600; }
+svg .grid { stroke: var(--line2); stroke-width: 1; fill: none; }
+details { border: 1px solid var(--line); border-radius: var(--radius); margin: 14px 0; background: var(--bg2); }
+details > summary { cursor: pointer; padding: 12px 16px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+details[open] > summary { color: var(--orange); }
+details > .in { padding: 0 16px 14px; }
+.key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+.panel .txt { font-size: 13px; color: var(--muted); margin-top: 10px; }
