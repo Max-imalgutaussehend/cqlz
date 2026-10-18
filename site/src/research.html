@@ -1,0 +1,37 @@
+cqlz research (alpha): CQL-Roofline
+---
+Alpha research proposal for the cqlz family: static roofline performance bounds for CQL queries from a typed IR, with a shard-aware Rust measurement harness.
+---
+<div class="wrap hero">
+<h1>Research <b>α</b></h1>
+<p class="lead">An early proposal that connects the family to HPC. It is a plan with pre-registered failure criteria, not a result: nothing below has been implemented or measured.</p>
+<div class="btns"><a class="btn primary" href="https://github.com/Max-imalgutaussehend/cqlz/blob/main/research/CQL-ROOFLINE.md">Full proposal</a></div>
+</div>
+
+<section><div class="wrap">
+<h2>CQL-Roofline</h2>
+<p class="sub"><b>Question:</b> can a typed CQL front end predict, before a query runs, an upper bound on its throughput and name the saturated resource (storage, network or CPU), as the Roofline model does for HPC kernels?</p>
+<div class="note">Status: alpha proposal. We could not verify novelty beyond our own searches; the first milestone is a proper literature review.</div>
+<h3>The idea</h3>
+<p class="sub">The Roofline model (Williams, Waterman, Patterson, CACM 2009) bounds attainable performance by <code>min(peak compute, bandwidth × arithmetic intensity)</code>. It has recently been adapted to <a href="https://arxiv.org/pdf/2302.00734">GPU query processing</a> and to <a href="https://arxiv.org/pdf/2602.23342">SSD-bound vector search</a>; both need bytes per operation as input. For wide-column stores that number can be derived statically, because <code>cqlc-core</code> already resolves schema and query into a typed IR: column widths, key restrictions, ranges and limits.</p>
+<pre><code>rows/s  ≤  min(  BW_nvme / (a · w),          <span class="c">storage</span>
+               IOPS_nvme / (a · pages),      <span class="c">random reads</span>
+               BW_net / w_out,               <span class="c">network</span>
+               cores · f / c_row )           <span class="c">CPU</span>
+
+w = bytes per row from the types   a = read amplification (measured)
+the minimizing term is the predicted bottleneck</code></pre>
+<h3>What would make it wrong</h3>
+<p class="sub">Decided in advance: we drop or reframe the idea if the median attained/bound ratio is below 0.3, if the predicted bottleneck matches the measured one in fewer than 70 % of cases, or if the model needs so much per-table fitting that it stops predicting.</p>
+<h3>Experiments</h3>
+<table>
+<tr><th></th><th>Workload</th><th>Measured</th></tr>
+<tr><td>E1</td><td>point reads, varying row width</td><td>attained/bound, bottleneck</td></tr>
+<tr><td>E2</td><td>partition scans, varying partition and page size</td><td>attained/bound, bottleneck</td></tr>
+<tr><td>E3</td><td>bulk ingest, shard-aware vs naive batching</td><td>rows/s per core</td></tr>
+</table>
+<p class="sub">A Rust shard-aware loader and scanner (token hashing in batches, per-shard batching) keeps the client from being the bottleneck. ScyllaDB's own petabyte benchmark reports that a shard-aware driver is essential at scale; we found no independent HPC-style ingest study.</p>
+<h3>Related work</h3>
+<p class="sub">NoSE (Mior, Salem, Aboulnaga, Liu; IEEE TKDE 2017) selects Cassandra schemas with an integer-programming cost model. CQL-Roofline does not design schemas; it bounds given ones, and could later supply such optimizers with a hardware-grounded cost term.</p>
+<div class="note">Limits: alpha runs on a single Apple M3 with a ScyllaDB container and can only support single-node statements. Scaling claims need a real cluster (Slurm or cloud nodes).</div>
+</div></section>

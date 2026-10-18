@@ -3,7 +3,7 @@
 import pathlib
 
 HERE = pathlib.Path(__file__).parent
-PAGES = [("index.html", "Family"), ("cqlc.html", "cqlc"), ("cqlx.html", "cqlx"), ("cql-ai.html", "cql-ai"), ("benchmarks.html", "Benchmarks")]
+PAGES = [("index.html", "Family"), ("cqlc.html", "cqlc"), ("cqlx.html", "cqlx"), ("cql-ai.html", "cql-ai"), ("benchmarks.html", "Benchmarks"), ("research.html", "Research α")]
 
 def page(slug, title, desc, body):
     nav = "".join(
