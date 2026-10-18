@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>cqlz research (alpha): CQL-Roofline</title>
-<meta name="description" content="Alpha research proposal for the cqlz family: static roofline performance bounds for CQL queries from a typed IR, with a shard-aware Rust measurement harness.">
+<title>cqlz research (alpha): CQL-Gym and CQL-Roofline</title>
+<meta name="description" content="Alpha research proposals for the cqlz family: verifier-in-the-loop reinforcement learning for Cassandra data modelling, and static roofline bounds for CQL queries.">
 <link rel="icon" href="logo.png">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -16,36 +16,44 @@
 <main>
 <div class="wrap hero">
 <h1>Research <b>α</b></h1>
-<p class="lead">An early proposal that connects the family to HPC. It is a plan with pre-registered failure criteria, not a result: nothing below has been implemented or measured.</p>
-<div class="btns"><a class="btn primary" href="https://github.com/Max-imalgutaussehend/cqlz/blob/main/research/CQL-ROOFLINE.md">Full proposal</a></div>
+<p class="lead">Early proposals that connect the family to machine learning and HPC. They are plans with pre-registered failure criteria, not results: nothing below has been implemented or measured.</p>
+<div class="btns"><a class="btn primary" href="https://github.com/Max-imalgutaussehend/cqlz/blob/main/research/CQL-GYM.md">CQL-Gym proposal</a><a class="btn" href="https://github.com/Max-imalgutaussehend/cqlz/blob/main/research/CQL-ROOFLINE.md">CQL-Roofline proposal</a></div>
 </div>
+
+<section><div class="wrap">
+<h2>CQL-Gym</h2>
+<p class="sub"><b>Question:</b> can a small neural policy, trained by self-play against <code>cqlc-core</code> as an exact verifier, find good Cassandra table designs faster than integer programming, and keep working at workload sizes where the integer program stops being solvable?</p>
+<div class="note">Status: alpha proposal. Related work below is cited from memory and not yet verified; we found no prior work on learned policies for Cassandra schema design, but that rests on our own searches, not a literature review.</div>
+<h3>The idea</h3>
+<p class="sub">Data modelling in Cassandra means choosing denormalised tables so every query is a cheap single-partition read. The standard automated approach, NoSE (Mior, Salem, Aboulnaga, Liu, IEEE TKDE 2017), solves a binary integer program. Here a policy builds the design step by step, and the cqlc analyzer decides after each step whether a query is valid and warning-free against the proposed schema. Invalid actions are masked, so every design the policy proposes is valid by construction, and the reward needs no labelled data.</p>
+<div class="diagram">
+<div class="node"><b>Workload</b>entities + weighted queries</div><div class="arrow">→</div>
+<div class="node"><b>Policy</b>Transformer in Burn over lexer tokens + roles</div><div class="arrow">→</div>
+<div class="node"><b>Action</b>add table / assign query</div><div class="arrow">→</div>
+<div class="node"><b>cqlc-core</b>exact validity + action mask</div><div class="arrow">→</div>
+<div class="node"><b>Reward</b>cost model</div>
+</div>
+<h3>Why HPC</h3>
+<p class="sub">Self-play needs millions of environment steps, so the environment is the bottleneck. Our benchmark runs the complete cqlc analysis of 36 queries in about 103 µs (roughly 3 µs per query). That suggests 10<sup>4</sup> to 10<sup>5</sup> environment steps per second per core, an extrapolation we have to measure. The plan is a vectorised, allocation-free Rust environment scaled across cores, with learning on a GPU through wgpu, in the spirit of GPU-accelerated RL simulators.</p>
+<h3>Experiments</h3>
+<table>
+<tr><th></th><th>Setting</th><th>Compared against</th><th>Measured</th></tr>
+<tr><td>E1</td><td>5–50 queries (ILP solvable)</td><td>NoSE-style ILP, greedy, random valid</td><td>cost ratio to optimum, time</td></tr>
+<tr><td>E2</td><td>50–500 queries (ILP times out)</td><td>ILP at timeout, greedy</td><td>cost, time, validity</td></tr>
+<tr><td>E3</td><td>unseen entity graphs and workloads</td><td>the same</td><td>generalisation gap</td></tr>
+<tr><td>E4</td><td>1 to N cores</td><td>itself</td><td>steps/s per core, scaling</td></tr>
+</table>
+<h3>What would make it wrong</h3>
+<p class="sub">Decided in advance: we drop or reframe the idea if the policy's median cost is more than 20 % above the ILP optimum where the ILP is solvable <em>and</em> it does not beat the greedy baseline at equal wall time where the ILP times out, or if environment throughput stays below 10<sup>4</sup> steps/s per core after optimisation.</p>
+<h3>Related work</h3>
+<p class="sub">NoSE (above) is the baseline and the source of the problem formulation. Neural combinatorial optimisation (Bello et al., 2016; Kool, van Hoof, Welling, ICLR 2019) trains attention policies with RL on combinatorial problems; the twist here is an exact, cheap constraint checker from a real compiler front end. Brax (Freeman et al., 2021) is the precedent for making the environment the scalable part.</p>
+<div class="note">Limits: the reward is a cost model, not a measurement, and a policy can exploit its errors, so final designs must be checked on a real ScyllaDB. Everything starts single-node on an Apple M3; scaling claims need a many-core machine.</div>
+</div></section>
 
 <section><div class="wrap">
 <h2>CQL-Roofline</h2>
 <p class="sub"><b>Question:</b> can a typed CQL front end predict, before a query runs, an upper bound on its throughput and name the saturated resource (storage, network or CPU), as the Roofline model does for HPC kernels?</p>
-<div class="note">Status: alpha proposal. We could not verify novelty beyond our own searches; the first milestone is a proper literature review.</div>
-<h3>The idea</h3>
-<p class="sub">The Roofline model (Williams, Waterman, Patterson, CACM 2009) bounds attainable performance by <code>min(peak compute, bandwidth × arithmetic intensity)</code>. It has recently been adapted to <a href="https://arxiv.org/pdf/2302.00734">GPU query processing</a> and to <a href="https://arxiv.org/pdf/2602.23342">SSD-bound vector search</a>; both need bytes per operation as input. For wide-column stores that number can be derived statically, because <code>cqlc-core</code> already resolves schema and query into a typed IR: column widths, key restrictions, ranges and limits.</p>
-<pre><code>rows/s  ≤  min(  BW_nvme / (a · w),          <span class="c">storage</span>
-               IOPS_nvme / (a · pages),      <span class="c">random reads</span>
-               BW_net / w_out,               <span class="c">network</span>
-               cores · f / c_row )           <span class="c">CPU</span>
-
-w = bytes per row from the types   a = read amplification (measured)
-the minimizing term is the predicted bottleneck</code></pre>
-<h3>What would make it wrong</h3>
-<p class="sub">Decided in advance: we drop or reframe the idea if the median attained/bound ratio is below 0.3, if the predicted bottleneck matches the measured one in fewer than 70 % of cases, or if the model needs so much per-table fitting that it stops predicting.</p>
-<h3>Experiments</h3>
-<table>
-<tr><th></th><th>Workload</th><th>Measured</th></tr>
-<tr><td>E1</td><td>point reads, varying row width</td><td>attained/bound, bottleneck</td></tr>
-<tr><td>E2</td><td>partition scans, varying partition and page size</td><td>attained/bound, bottleneck</td></tr>
-<tr><td>E3</td><td>bulk ingest, shard-aware vs naive batching</td><td>rows/s per core</td></tr>
-</table>
-<p class="sub">A Rust shard-aware loader and scanner (token hashing in batches, per-shard batching) keeps the client from being the bottleneck. ScyllaDB's own petabyte benchmark reports that a shard-aware driver is essential at scale; we found no independent HPC-style ingest study.</p>
-<h3>Related work</h3>
-<p class="sub">NoSE (Mior, Salem, Aboulnaga, Liu; IEEE TKDE 2017) selects Cassandra schemas with an integer-programming cost model. CQL-Roofline does not design schemas; it bounds given ones, and could later supply such optimizers with a hardware-grounded cost term.</p>
-<div class="note">Limits: alpha runs on a single Apple M3 with a ScyllaDB container and can only support single-node statements. Scaling claims need a real cluster (Slurm or cloud nodes).</div>
+<p class="sub">The Roofline model (Williams, Waterman, Patterson, CACM 2009) has recently been adapted to <a href="https://arxiv.org/pdf/2302.00734">GPU query processing</a> and to <a href="https://arxiv.org/pdf/2602.23342">SSD-bound vector search</a>. For wide-column stores the bytes per row can be derived statically from the cqlc IR. Falsification: drop it if the median attained/bound ratio is below 0.3 or the predicted bottleneck matches in fewer than 70 % of cases. It would later calibrate CQL-Gym's cost model. <a href="https://github.com/Max-imalgutaussehend/cqlz/blob/main/research/CQL-ROOFLINE.md">Full proposal</a>.</p>
 </div></section>
 
 </main>
