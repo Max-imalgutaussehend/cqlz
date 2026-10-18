@@ -3,99 +3,182 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>cqlz benchmarks: cqlc, cqlx and cql-ai measured</title>
-<meta name="description" content="Measured benchmarks for the cqlz family: cqlc front-end vs sqlparser, cqlx vs the raw ScyllaDB driver and charybdis, cql-ai latency and sequence length.">
+<title>cqlz benchmarks: cqlc, cqlx, cql-ai and cqlz-gym measured</title>
+<meta name="description" content="Measured benchmarks for the cqlz family: cqlc vs sqlparser, cqlx on YCSB against the raw ScyllaDB driver and charybdis, real-world KillrVideo checks, cql-ai latency, and cqlz-gym.">
+<meta name="theme-color" content="#171010">
 <link rel="icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="topbar"><b>NEW</b> &nbsp;Real-world KillrVideo results, YCSB against cqlx and a learned schema designer &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
 <header class="nav"><div class="wrap">
-<a class="brand" href="index.html">cql<b>z</b></a><a class="link" href="index.html">Family</a><a class="link" href="cqlc.html">cqlc</a><a class="link" href="cqlx.html">cqlx</a><a class="link" href="cql-ai.html">cql-ai</a><a class="link" href="benchmarks.html" aria-current="page">Benchmarks</a><a class="link" href="research.html">Research α</a>
-<a class="link gh" href="https://github.com/Max-imalgutaussehend/cqlz">GitHub</a>
+<a class="brand" href="index.html">cql<b>z</b></a><a class="link" href="cqlc.html">cqlc</a><a class="link" href="cqlx.html">cqlx</a><a class="link" href="cql-ai.html">cql-ai</a><a class="link" href="benchmarks.html" aria-current="page">Benchmarks</a><a class="link" href="examples.html">Examples</a><a class="link" href="research.html">Research (alpha)</a>
+<span class="spacer"></span>
+<a class="chip" href="https://github.com/Max-imalgutaussehend/cqlz">GitHub</a>
+<a class="chip cta" href="cqlc.html">Get started</a>
 </div></header>
 <main>
-<div class="wrap hero">
+<div class="hero left">
 <h1>Benchmarks</h1>
 <p class="lead">Real measurements, including the ones that do not flatter us. Every number is reproducible with the commands at the bottom.</p>
-<div class="note">Machine: Apple M3, 8 cores, 16 GB, macOS 27, Rust 1.99 release builds, Criterion (median of 100 samples unless noted), ScyllaDB in Docker on the same machine. Treat absolute numbers as indicative; ratios matter more.</div>
+<div class="note">Machine: Apple M3, 8 cores, 16 GB, macOS 27, Rust 1.99 release builds. ScyllaDB (latest image) runs in Docker on the same machine, so absolute numbers are indicative and ratios matter more. Criterion medians of 100 samples unless noted.</div>
 </div>
 
-<section><div class="wrap">
-<h2>cqlc: front-end speed</h2>
-<p class="sub">Input: the 36 queries and schema of cqlc's <code>shop</code> example (about 5 KB). Comparison: <a href="https://crates.io/crates/sqlparser">sqlparser</a>, the most widely used Rust SQL parser. It parses SQL, not CQL, so it only accepts 22 of the 36 statements; the table uses those 22 for the parse-to-parse row.</p>
+<section class="first"><div class="wrap">
+<div class="eyebrow">Where the data comes from</div>
+<h2>Benchmarks and datasets used</h2>
 <table>
-<tr><th>Benchmark</th><th class="num">Time</th><th class="num">Throughput</th></tr>
-<tr><td>cqlc lexer, all queries</td><td class="num">13.9 µs</td><td class="num">298 MiB/s</td></tr>
-<tr><td>cqlc parser, all queries</td><td class="num">52 µs</td><td class="num">79 MiB/s</td></tr>
-<tr><td><b>cqlc full analysis</b>: lex, parse, resolve schema, type-check 36 queries</td><td class="num">103 µs</td><td class="num">40 MiB/s</td></tr>
-<tr><td>sqlparser parse, 22 accepted statements</td><td class="num">126 µs</td><td class="num">15.7 MiB/s</td></tr>
-<tr><td>cqlc parse, the same 22 statements</td><td class="num">33 µs</td><td class="num">59.7 MiB/s</td></tr>
+<tr><th>Source</th><th>Used for</th><th>Status</th></tr>
+<tr><td><a href="https://github.com/brianfrankcooper/YCSB">YCSB</a> core workloads A, B, C (Zipfian 0.99)</td><td>cqlx vs raw driver vs charybdis</td><td>used, re-implemented in Rust with deviations listed below</td></tr>
+<tr><td><a href="https://github.com/KillrVideo/killrvideo-data">KillrVideo</a> schemas v3, v4, v5 and query examples (Apache-2.0)</td><td>real-world check of cqlc and cql-ai; cqlc example project</td><td>used, files copied unmodified</td></tr>
+<tr><td><a href="https://datastax.com/learn/data-modeling-by-example">DataStax data modeling by example</a> (sensors, shopping cart, orders)</td><td>shapes of the cqlz-gym domain workloads</td><td>used as inspiration; workloads are hand-modelled</td></tr>
+<tr><td><a href="https://docs.nosqlbench.io/">NoSQLBench</a>, <a href="https://github.com/timescale/tsbs">TSBS</a>, RUBiS</td><td>candidates for a cluster-scale study</td><td>not used yet (NoSQLBench and TSBS are cluster tools; TSBS covers Cassandra only for its DevOps use case)</td></tr>
 </table>
-<p class="sub">Reading: on identical statements cqlc's parser is about <b>3.8× faster</b> than sqlparser's, and cqlc's complete analysis, which also checks every query against the schema, finishes in less time than sqlparser needs for parsing alone. Caveat: sqlparser is a general multi-dialect parser, so this shows cqlc is lean for CQL, not that sqlparser is slow.</p>
-<div class="bar"><i style="width:26%"></i></div><p class="sub" style="font-size:14px;margin-top:6px">cqlc parse 33 µs vs sqlparser 126 µs (bar = cqlc share)</p>
 </div></section>
 
 <section><div class="wrap">
-<h2>cqlx: abstraction cost</h2>
+<div class="eyebrow">cqlc</div>
+<h2>Front-end speed</h2>
+<div class="chart">
+<div class="title">Parse the same 22 statements (µs, lower is better)</div>
+<div class="row hl"><div class="lab">cqlc parser</div><div class="track"><div class="bar" style="width:26%"></div></div><div class="val">33 µs</div></div>
+<div class="row"><div class="lab">sqlparser</div><div class="track"><div class="bar" style="width:100%"></div></div><div class="val">126 µs</div></div>
+</div>
+<table>
+<tr><th>Benchmark (36-query shop example)</th><th class="num">Time</th><th class="num">Throughput</th></tr>
+<tr><td>cqlc lexer</td><td class="num">13.9 µs</td><td class="num">298 MiB/s</td></tr>
+<tr><td>cqlc parser</td><td class="num">52 µs</td><td class="num">79 MiB/s</td></tr>
+<tr class="hl"><td>cqlc full analysis: lex, parse, resolve schema, type-check</td><td class="num">103 µs</td><td class="num">40 MiB/s</td></tr>
+</table>
+<p class="sub">sqlparser is a general multi-dialect SQL parser: it accepts 22 of the 36 statements and does no schema resolution. The comparison shows cqlc is lean for CQL, not that sqlparser is slow.</p>
+
+<h3>Real-world CQL: the KillrVideo reference schemas</h3>
+<table>
+<tr><th>Input</th><th class="num">cqlc accepts</th><th>Why the rest fails</th></tr>
+<tr><td>schema 3.x, CREATE TABLE</td><td class="num">14 / 14</td><td></td></tr>
+<tr><td>schema 4.0 as published</td><td class="num">9 / 16</td><td><code>DEFAULT currentTimestamp()</code> (Cassandra 4.0)</td></tr>
+<tr><td>schema 4.0 after removing <code>DEFAULT</code> clauses</td><td class="num">16 / 16</td><td></td></tr>
+<tr><td>schema 5.0</td><td class="num">11 / 19</td><td><code>vector&lt;…&gt;</code> and <code>MASKED</code> (Cassandra 5.0)</td></tr>
+<tr><td>query examples (20 statements)</td><td class="num">15 / 20</td><td>arithmetic on dates, a <code>/</code> expression, an unknown function, <code>toDate</code> on text</td></tr>
+</table>
+<div class="note">This is a real coverage gap, not a benchmark win: cqlc handles the classic 3.x feature set fully but not the newest Cassandra 4.0 and 5.0 syntax. The query statements needed one mechanical normalisation: the repository's helper UDF <code>sample_uuid('x')</code> was replaced by a UUID literal.</div>
+</div></section>
+
+<section><div class="wrap">
+<div class="eyebrow">cqlx</div>
+<h2>YCSB against a real ScyllaDB</h2>
+<p class="sub">50,000 records of 10 × 100-byte fields, Zipfian 0.99, 64 concurrent tasks, 10 s per workload, median of 3 runs. One ScyllaDB node (2 shards) in Docker on the same machine.</p>
+<div class="chart">
+<div class="title">Workload A, 50 % reads / 50 % updates (ops/s, higher is better)</div>
+<div class="row hl"><div class="lab">cqlx</div><div class="track"><div class="bar" style="width:98%"></div></div><div class="val">49,093</div></div>
+<div class="row"><div class="lab">raw scylla driver</div><div class="track"><div class="bar" style="width:99.5%"></div></div><div class="val">49,759</div></div>
+<div class="row"><div class="lab">charybdis</div><div class="track"><div class="bar" style="width:100%"></div></div><div class="val">49,998</div></div>
+</div>
+<div class="chart">
+<div class="title">Workload B, 95 % reads (ops/s)</div>
+<div class="row hl"><div class="lab">cqlx</div><div class="track"><div class="bar" style="width:93.5%"></div></div><div class="val">55,521</div></div>
+<div class="row"><div class="lab">raw scylla driver</div><div class="track"><div class="bar" style="width:96%"></div></div><div class="val">57,079</div></div>
+<div class="row"><div class="lab">charybdis</div><div class="track"><div class="bar" style="width:100%"></div></div><div class="val">59,381</div></div>
+</div>
+<div class="chart">
+<div class="title">Workload C, 100 % reads (ops/s)</div>
+<div class="row hl"><div class="lab">cqlx</div><div class="track"><div class="bar" style="width:100%"></div></div><div class="val">63,070</div></div>
+<div class="row"><div class="lab">raw scylla driver</div><div class="track"><div class="bar" style="width:98.4%"></div></div><div class="val">62,081</div></div>
+<div class="row"><div class="lab">charybdis</div><div class="track"><div class="bar" style="width:96.5%"></div></div><div class="val">60,860</div></div>
+</div>
+<table>
+<tr><th>Workload</th><th>Contender</th><th class="num">ops/s median (min–max of 3)</th><th class="num">p50</th><th class="num">p99</th></tr>
+<tr><td rowspan="3">A</td><td>cqlx</td><td class="num">49,093 (48,731–49,995)</td><td class="num">1.12 ms</td><td class="num">3.61 ms</td></tr>
+<tr><td>raw driver</td><td class="num">49,759 (48,451–52,319)</td><td class="num">1.13 ms</td><td class="num">3.56 ms</td></tr>
+<tr><td>charybdis</td><td class="num">49,998 (42,779–52,999)</td><td class="num">1.11 ms</td><td class="num">3.66 ms</td></tr>
+<tr><td rowspan="3">B</td><td>cqlx</td><td class="num">55,521 (47,885–58,140)</td><td class="num">0.98 ms</td><td class="num">3.56 ms</td></tr>
+<tr><td>raw driver</td><td class="num">57,079 (45,904–61,155)</td><td class="num">0.95 ms</td><td class="num">3.14 ms</td></tr>
+<tr><td>charybdis</td><td class="num">59,381 (44,653–66,003)</td><td class="num">0.92 ms</td><td class="num">3.01 ms</td></tr>
+<tr><td rowspan="3">C</td><td>cqlx</td><td class="num">63,070 (51,538–64,863)</td><td class="num">0.94 ms</td><td class="num">2.59 ms</td></tr>
+<tr><td>raw driver</td><td class="num">62,081 (41,049–66,666)</td><td class="num">0.96 ms</td><td class="num">2.52 ms</td></tr>
+<tr><td>charybdis</td><td class="num">60,860 (59,471–61,552)</td><td class="num">0.86 ms</td><td class="num">2.80 ms</td></tr>
+</table>
+<p class="sub">Reading: the three are statistically indistinguishable. Run-to-run spread (up to 30 % between runs) is larger than any gap between contenders, so no ranking can be claimed. cqlx is not measurably slower than the raw driver, which is the point of "zero overhead". Deviations from canonical YCSB: an update rewrites the whole row (cqlx has no partial update yet, so all contenders do the same), keys are not hash-scrambled, and this is one node, not a cluster.</p>
 <h3>In-process: building a statement (no network)</h3>
 <table>
 <tr><th>Benchmark</th><th class="num">Time</th></tr>
-<tr><td>cqlx type-state <code>SELECT</code> (2 partition keys, 1 range, limit; validated)</td><td class="num">320 ns</td></tr>
+<tr class="hl"><td>cqlx type-state <code>SELECT</code> (2 partition keys, range, limit; validated)</td><td class="num">320 ns</td></tr>
 <tr><td>hand-written <code>format!</code> + boxed values (no validation)</td><td class="num">68 ns</td></tr>
 <tr><td>cqlx <code>insert_values()</code> (4 columns)</td><td class="num">46 ns</td></tr>
 </table>
-<p class="sub">The builder costs about 250 ns more than concatenating strings by hand. That buys compile-time partition-key enforcement and clustering validation. The type-state itself is free: the type parameters are zero-sized.</p>
-<h3>Against a real ScyllaDB (Docker): cqlx vs raw driver vs charybdis</h3>
-<table>
-<tr><th>Operation</th><th class="num">cqlx</th><th class="num">raw scylla driver</th><th class="num">charybdis</th></tr>
-<tr><td>select one partition (10 rows)</td><td class="num">142.7 µs</td><td class="num">148.0 µs</td><td class="num">147.1 µs</td></tr>
-<tr><td>insert one row</td><td class="num">140.7 µs</td><td class="num">139.6 µs</td><td class="num">141.8 µs</td></tr>
-</table>
-<p class="sub">All three use prepared statements on the same table and are indistinguishable within noise (±3%): a database round trip costs about 140 µs, so a 0.3 µs builder is invisible. "Zero overhead" holds in the sense that matters on the wire. <a href="https://crates.io/crates/charybdis">charybdis</a> is the closest existing Rust ORM for ScyllaDB; this is a single-node loopback test, not a cluster benchmark.</p>
+<p class="sub">The builder costs about 250 ns more than concatenating strings by hand, which a ~1 ms database round trip hides completely.</p>
 </div></section>
 
 <section><div class="wrap">
-<h2>cql-ai: cost and sequence length</h2>
+<div class="eyebrow">cql-ai</div>
+<h2>Cost, accuracy and honesty</h2>
+<div class="chart">
+<div class="title">Time to check the same 36 statements (log scale not used: the gap is the point)</div>
+<div class="row hl"><div class="lab">cqlc analysis</div><div class="track"><div class="bar" style="width:0.4%;min-width:3px"></div></div><div class="val">0.10 ms</div></div>
+<div class="row"><div class="lab">cql-ai (forward, 1 batch)</div><div class="track"><div class="bar" style="width:100%"></div></div><div class="val">41 ms</div></div>
+</div>
+<div class="note"><b>The honest comparison:</b> the neural model is about 400× slower than cqlc's own analyzer on statements both can handle. <code>cql-ai check</code> still takes only about 52 ms wall clock end to end (process start and weights included), far inside a CI budget. Its niche is tolerating partial queries and reporting probabilities; use <code>cqlc check</code> when you have a complete schema.</div>
 <table>
-<tr><th>Benchmark (36 statements)</th><th class="num">Time</th></tr>
-<tr><td>cql-ai tokenization (cqlc lexer + schema roles)</td><td class="num">43 µs</td></tr>
-<tr><td>cql-ai Transformer forward, one batch of 36 (CPU, pure Rust)</td><td class="num">41 ms</td></tr>
-<tr><td>cql-ai Transformer forward, single statement</td><td class="num">1.12 ms</td></tr>
-<tr><td>cqlc deterministic analysis of the same 36 statements</td><td class="num">0.10 ms</td></tr>
-<tr><td><code>cql-ai check</code> end to end, wall clock incl. process start and loading weights</td><td class="num">≈ 52 ms</td></tr>
+<tr><th>Evaluation</th><th class="num">Exact label-set match</th><th class="num">Statements</th></tr>
+<tr><td>synthetic, unseen schemas</td><td class="num">94.9 %</td><td class="num">10,000</td></tr>
+<tr class="hl"><td>real KillrVideo queries that cqlc can analyse</td><td class="num">60 % (9 / 15)</td><td class="num">15</td></tr>
 </table>
-<div class="note"><b>The honest comparison:</b> the neural model is about 400× slower than cqlc's own analyzer on the statements both can handle. It still comfortably meets a CI budget (about 52 ms wall for a whole file, against a 500 ms target), but speed is not its selling point. Its niche is tolerating partial or non-compiling queries and reporting probabilities; use <code>cqlc check</code> when you have a complete schema and want certainty.</div>
+<p class="sub">On the real queries the model's per-label results were MissingPartitionKey tp 2 / fp 2 / fn 1, NonKeyRestriction tp 2 / fp 1 / fn 2, OrderByMismatch tp 1 / fn 1. Fifteen statements are too few for a confident number, but the drop from 95 % to 60 % is the honest signal: the model was trained on synthetic queries and real CQL (functions, collection filters, dates) is out of distribution. A real labelled corpus is the next step.</p>
 <h3>Sequence length</h3>
-<table>
-<tr><th>Representation (per statement, average)</th><th class="num">Length</th></tr>
-<tr><td>UTF-8 bytes</td><td class="num">86.1</td></tr>
-<tr><td>Whitespace-separated words</td><td class="num">13.0</td></tr>
-<tr><td>BPE-style subwords (estimated at ~3.5 bytes/token, not measured)</td><td class="num">≈ 24.6</td></tr>
-<tr><td><b>cql-ai ids</b> (lexer tokens + roles)</td><td class="num">17.9</td></tr>
-</table>
-<p class="sub">So lexer ids are <b>4.8× shorter than bytes</b> and about <b>1.4× shorter</b> than an estimated BPE sequence, not 10×. The bigger win is the vocabulary: 240 ids instead of roughly 50,000, which keeps the embedding table and the whole model tiny (576k parameters, 2.3 MB).</p>
-<h3>Model quality</h3>
-<p class="sub">On 10,000 statements from unseen synthetic schemas: macro-F1 0.977, exact label-set match 94.9%; four of six labels at F1 ≥ 0.99, the weakest, <code>MissingPartitionKey</code>, at 0.885. These measure fidelity to cqlc's analyzer on synthetic data, not accuracy on arbitrary real-world CQL.</p>
+<div class="chart">
+<div class="title">Average length per statement (shop example)</div>
+<div class="row"><div class="lab">UTF-8 bytes</div><div class="track"><div class="bar" style="width:100%"></div></div><div class="val">86.1</div></div>
+<div class="row"><div class="lab">BPE (estimated)</div><div class="track"><div class="bar" style="width:28.6%"></div></div><div class="val">≈ 24.6</div></div>
+<div class="row hl"><div class="lab">cql-ai ids</div><div class="track"><div class="bar" style="width:20.8%"></div></div><div class="val">17.9</div></div>
+</div>
+<p class="sub">4.8× shorter than bytes, about 1.4× shorter than an estimated BPE sequence (3.5 bytes per token, not run), not 10×. The larger win is the vocabulary: 240 ids instead of roughly 50,000.</p>
 </div></section>
 
 <section><div class="wrap">
-<h2>Reproduce</h2>
-<pre><code><span class="c"># cqlc front-end, cql-ai latency and token stats</span>
-git clone https://github.com/Max-imalgutaussehend/cqlz &amp;&amp; cd cqlz
-cargo bench -p cqlz-benchmarks --bench frontend
-cargo bench -p cqlz-benchmarks --bench inference
-cargo run --release --bin token_stats
+<div class="eyebrow">cqlz-gym, alpha</div>
+<h2>Learned table design</h2>
+<div class="chart">
+<div class="title">80–150-query workloads: cost relative to best design found (lower is better)</div>
+<div class="row"><div class="lab">naive</div><div class="track"><div class="bar" style="width:94%"></div></div><div class="val">1.014</div></div>
+<div class="row"><div class="lab">greedy</div><div class="track"><div class="bar" style="width:100%"></div></div><div class="val">1.060</div></div>
+<div class="row"><div class="lab">exact B&amp;B (15 s limit)</div><div class="track"><div class="bar" style="width:98%"></div></div><div class="val">1.038</div></div>
+<div class="row hl"><div class="lab">learned policy</div><div class="track"><div class="bar" style="width:94%"></div></div><div class="val">1.002</div></div>
+<div class="cap">Bars start at 0.94 for readability; values are the table's numbers. The exact solver finished 0 of 8 instances; the policy needs 0.31 s per rollout.</div>
+</div>
+<table>
+<tr><th>Workload size</th><th class="num">greedy</th><th class="num">exact</th><th class="num">learned</th><th class="num">exact finished</th></tr>
+<tr><td>8–16 queries</td><td class="num">1.008</td><td class="num">1.000</td><td class="num">1.000</td><td class="num">8/8</td></tr>
+<tr><td>25–50 queries</td><td class="num">1.037</td><td class="num">1.003</td><td class="num">1.002</td><td class="num">7/8</td></tr>
+<tr class="hl"><td>80–150 queries</td><td class="num">1.060</td><td class="num">1.038</td><td class="num">1.002</td><td class="num">0/8</td></tr>
+</table>
+<p class="sub">Verification costs about 3.6 µs per <code>cqlc-core</code> call and the environment runs at about 227,000 steps/s on one core. Caveats: the exact baseline is a simple branch-and-bound, not an integer-programming solver such as NoSE's; the cost model is synthetic; test workloads come from the training generator. Domain workloads (KillrVideo, sensors, shop) are on the <a href="examples.html">examples page</a>.</p>
+</div></section>
 
-<span class="c"># cqlx (the db bench needs Docker)</span>
-git clone https://github.com/Max-imalgutaussehend/cqlx &amp;&amp; cd cqlx
-cargo bench -p cqlx --bench build
-cargo bench -p cqlx --bench db</code></pre>
-<p class="sub">Not measured: cluster-scale throughput, tail latencies under load, comparisons of cqlc-generated code against the raw driver (it is thin wrappers over prepared statements, so we expect parity with the cqlx result, but have not run it).</p>
+<section><div class="wrap">
+<div class="eyebrow">Reproduce</div>
+<h2>Run it yourself</h2>
+<pre><code><span class="c"># cqlc front end, cql-ai latency, token statistics, real-world KillrVideo check</span>
+git clone https://github.com/Max-imalgutaussehend/cqlz &amp;&amp; cd cqlz/benchmarks
+cargo bench --bench frontend
+cargo bench --bench inference
+cargo run --release --bin token_stats
+cargo run --release --bin realworld -- &lt;cql-ai model dir&gt;
+
+<span class="c"># cqlx vs raw driver vs charybdis (needs Docker)</span>
+cargo run --release --bin ycsb -- 50000 10
+
+<span class="c"># cqlz-gym</span>
+git clone https://github.com/Max-imalgutaussehend/cqlz-lab &amp;&amp; cd cqlz-lab
+cargo run --release -p cqlz-gym -- eval --policy artifacts --instances 8 --exact-seconds 15</code></pre>
+<p class="sub">Not measured: cluster-scale throughput, tail latencies under overload, multi-node scaling, comparison with Cassandra rather than ScyllaDB.</p>
 </div></section>
 
 </main>
 <footer><div class="wrap">
-<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a>. Apache-2.0.</span>
+<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="research.html">research</a>. Apache-2.0.</span>
 <span>Built by <a href="https://github.com/Max-imalgutaussehend">Max-imalgutaussehend</a></span>
 </div></footer>
 </body>

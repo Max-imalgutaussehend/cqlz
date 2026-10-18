@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cqlz examples: KillrVideo, IoT telemetry and learned schema design</title>
+<meta name="description" content="Runnable example projects for the cqlz family: cqlc on the real KillrVideo schema, a cqlx IoT app, and cqlz-gym on domain workloads.">
+<meta name="theme-color" content="#171010">
+<link rel="icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="topbar"><b>NEW</b> &nbsp;Real-world KillrVideo results, YCSB against cqlx and a learned schema designer &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
+<header class="nav"><div class="wrap">
+<a class="brand" href="index.html">cql<b>z</b></a><a class="link" href="cqlc.html">cqlc</a><a class="link" href="cqlx.html">cqlx</a><a class="link" href="cql-ai.html">cql-ai</a><a class="link" href="benchmarks.html">Benchmarks</a><a class="link" href="examples.html" aria-current="page">Examples</a><a class="link" href="research.html">Research (alpha)</a>
+<span class="spacer"></span>
+<a class="chip" href="https://github.com/Max-imalgutaussehend/cqlz">GitHub</a>
+<a class="chip cta" href="cqlc.html">Get started</a>
+</div></header>
+<main>
+<div class="hero left">
+<h1>Examples</h1>
+<p class="lead">Small projects that run against a real ScyllaDB. All of them are in the <a href="https://github.com/Max-imalgutaussehend/cqlz/tree/main/examples">cqlz repository</a>.</p>
+</div>
+
+<section class="first"><div class="wrap">
+<div class="eyebrow">cqlc, schema-first</div>
+<h2>KillrVideo</h2>
+<p class="sub">The real 3.x schema from <a href="https://github.com/KillrVideo/killrvideo-data">KillrVideo/killrvideo-data</a> (Apache-2.0): 14 tables with counters, static columns and clustering orders. The 13 queries were written for this example following the access patterns the schema comments describe. cqlc checks them offline and generates typed Rust; the demo runs every generated function against a live node.</p>
+<pre><code>cd examples/killrvideo-cqlc
+cqlc check                     <span class="c"># ok: 13 queries checked</span>
+cqlc generate                  <span class="c"># wrote src/queries.rs (13 queries)</span>
+CQLC_NODE=127.0.0.1:9042 cargo run
+<span class="c">videos of user, newest first: ["Compaction explained", "Data modeling", "Intro to Cassandra"]
+playback views: Some(Counter(4))
+ok: 13 generated queries exercised against the real KillrVideo schema</span></code></pre>
+<a class="btn" href="https://github.com/Max-imalgutaussehend/cqlz/tree/main/examples/killrvideo-cqlc">Source</a>
+</div></section>
+
+<section><div class="wrap">
+<div class="eyebrow">cqlx, code-first</div>
+<h2>IoT sensor telemetry</h2>
+<p class="sub">The "sensor" model from DataStax's data-modeling-by-example, as one Rust struct. Readings are bucketed by day so partitions stay bounded, inserts are typed, and every read is a type-state query: <code>fetch</code> does not exist until both partition keys are set.</p>
+<pre><code><span class="k">#[derive(CqlEntity, DeserializeRow)]</span>
+#[cqlx(table_name = <span class="s">"readings"</span>, keyspace = <span class="s">"iot"</span>)]
+<span class="k">struct</span> Reading {
+    #[cqlx(partition_key)] sensor_id: String,
+    #[cqlx(partition_key)] day: i32,
+    #[cqlx(clustering_key(order = <span class="s">"desc"</span>))] ts: i64,
+    temperature: f64,
+    humidity: f64,
+}
+
+Reading::query().sensor_id(<span class="s">"sensor-007"</span>.into()).day(20_001).limit(3).fetch(&amp;session).<span class="k">await</span>?;</code></pre>
+<pre><code>inserted 150000 readings in 2.60s (57639/s)       <span class="c"># one laptop, Docker ScyllaDB</span>
+latest 3 of sensor-007 on day 20001: [(86313600, 27.9), (86227200, 27.8), (86140800, 27.7)]
+range query returned 10 rows</code></pre>
+<a class="btn" href="https://github.com/Max-imalgutaussehend/cqlz/tree/main/examples/sensor-cqlx">Source</a>
+</div></section>
+
+<section><div class="wrap">
+<div class="eyebrow">cqlz-gym, alpha</div>
+<h2>Learned table design on domain workloads</h2>
+<p class="sub">Three workloads modelled after KillrVideo's access patterns and two DataStax data-modeling-by-example domains (sensors, shopping cart and orders). They are hand-modelled workloads, not those projects' datasets. Costs use the synthetic cost model, so compare columns, not absolute numbers.</p>
+<table>
+<tr><th>Workload</th><th class="num">naive</th><th class="num">greedy</th><th class="num">exact B&amp;B</th><th class="num">learned policy</th><th class="num">tables</th></tr>
+<tr><td>KillrVideo (7 queries)</td><td class="num">4,494</td><td class="num">4,494</td><td class="num">4,494</td><td class="num">4,494</td><td class="num">7</td></tr>
+<tr class="hl"><td>Sensors (6 queries)</td><td class="num">119,541</td><td class="num">119,541</td><td class="num">91,907</td><td class="num">91,907</td><td class="num">5</td></tr>
+<tr class="hl"><td>Shop and carts (7 queries)</td><td class="num">28,032</td><td class="num">29,814</td><td class="num">26,540</td><td class="num">26,540</td><td class="num">6</td></tr>
+</table>
+<p class="sub">Sensors: merging the two read patterns that share a partition key saves 23 % over one table per query. Shop: the learned design is 5 % cheaper than naive and 11 % cheaper than greedy, which opens eight tables. KillrVideo: there is nothing to merge, so every method agrees. On the tiny <code>examples/shop.toml</code> of the repository the policy misses a merge the exact solver finds; it was trained on larger workloads and pays off at scale.</p>
+<pre><code>cargo install cqlz-gym
+cqlz-gym solve examples/gym-workloads/sensors.toml --policy hf</code></pre>
+<a class="btn" href="https://github.com/Max-imalgutaussehend/cqlz/tree/main/examples/gym-workloads">Workloads</a>
+</div></section>
+
+</main>
+<footer><div class="wrap">
+<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="research.html">research</a>. Apache-2.0.</span>
+<span>Built by <a href="https://github.com/Max-imalgutaussehend">Max-imalgutaussehend</a></span>
+</div></footer>
+</body>
+</html>

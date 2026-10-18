@@ -1,37 +1,48 @@
-cqlz: typesafe tools for Cassandra and ScyllaDB in Rust
+cqlz: typesafe tooling for Cassandra and ScyllaDB
 ---
-The cqlz family: cqlc (schema-first codegen), cqlx (code-first ORM) and cql-ai (neural anti-pattern detector) for Cassandra and ScyllaDB.
+The cqlz family: cqlc (schema-first codegen), cqlx (code-first ORM), cql-ai (neural anti-pattern detector) and alpha research for Cassandra and ScyllaDB, in Rust.
 ---
-<div class="wrap hero">
-<h1>Typesafe CQL.<br>From schema, from code, from <b>data</b>.</h1>
-<p class="lead">Three small Rust tools that move mistakes in Cassandra and ScyllaDB queries from production to compile time and CI. Pick the direction that fits your project; they share one parser.</p>
-<div class="btns">
-<a class="btn primary" href="cqlc.html">Start with cqlc</a>
-<a class="btn" href="cqlx.html">cqlx ORM</a>
-<a class="btn" href="cql-ai.html">cql-ai linter</a>
-<a class="btn" href="benchmarks.html">Benchmarks</a>
-<a class="btn" href="research.html">Research α</a>
-</div>
+<div class="hero">
+<h1>Typesafe <b>CQL</b>.<br>Written in Rust.</h1>
+<p class="lead">Three small tools that move mistakes in Cassandra and ScyllaDB queries from production to compile time and CI. Pick the direction that fits your project; they share one parser.</p>
+<div class="btns"><a class="btn primary" href="cqlc.html">Get started</a><a class="btn" href="benchmarks.html">Benchmarks</a><a class="btn" href="examples.html">Examples</a></div>
+<div class="install"><i>$</i> cargo install cqlc</div>
 </div>
 
-<section><div class="wrap">
-<h2>The family</h2>
-<p class="sub">Same goal, three entry points. All three build on the ScyllaDB Rust driver and speak plain CQL.</p>
+<section class="first"><div class="wrap">
+<div class="eyebrow">The family</div>
+<h2>Three entry points, one foundation</h2>
+<p class="sub">All three build on the ScyllaDB Rust driver and <code>cqlc-core</code>, the lexer, parser, schema resolver and type checker that checks every statement.</p>
 <div class="grid">
 <div class="card"><span class="tag">Schema-first</span><h3>cqlc</h3>
-<p>Write <code>.cql</code> schema and named queries. cqlc type-checks them offline and generates typed async Rust, like <a href="https://sqlc.dev">sqlc</a> for Cassandra.</p>
+<p>Write <code>.cql</code> schema and named queries. cqlc type-checks them offline and generates typed async Rust, like sqlc for Cassandra.</p>
+<div class="stat">3.8×<small>faster parsing than sqlparser on identical statements</small></div><br>
 <a class="more" href="cqlc.html">Read more →</a></div>
 <div class="card"><span class="tag">Code-first</span><h3>cqlx</h3>
 <p>Write a Rust struct. <code>#[derive(CqlEntity)]</code> generates the table, inserts and a type-state query builder that cannot forget a partition key.</p>
+<div class="stat">≈ 1.0×<small>of the raw driver on YCSB A, B and C</small></div><br>
 <a class="more" href="cqlx.html">Read more →</a></div>
 <div class="card"><span class="tag">Analysis</span><h3>cql-ai</h3>
 <p>A 0.6M-parameter Transformer over cqlc lexer tokens that flags anti-patterns in CI with probabilities, in milliseconds.</p>
+<div class="stat">52 ms<small>wall clock for a 36-statement file, weights cached</small></div><br>
 <a class="more" href="cql-ai.html">Read more →</a></div>
 </div>
 </div></section>
 
 <section><div class="wrap">
-<h2>How they fit together</h2>
+<div class="eyebrow">Measured, not claimed</div>
+<h2>Parsing CQL, on identical statements</h2>
+<div class="chart">
+<div class="title">Time to parse the same 22 statements (lower is better)</div>
+<div class="row hl"><div class="lab">cqlc parser</div><div class="track"><div class="bar" style="width:26%"></div></div><div class="val">33 µs</div></div>
+<div class="row"><div class="lab">sqlparser</div><div class="track"><div class="bar" style="width:100%"></div></div><div class="val">126 µs</div></div>
+<div class="cap">cqlc's complete analysis, which also type-checks every query against the schema, takes 103 µs for all 36 statements. sqlparser parses SQL, not CQL, so it only accepts 22 of them. <a href="benchmarks.html">All benchmarks and caveats →</a></div>
+</div>
+</div></section>
+
+<section><div class="wrap">
+<div class="eyebrow">How they fit together</div>
+<h2>One parser under everything</h2>
 <div class="diagram">
 <div class="node"><b>.cql files</b>schema + queries</div><div class="arrow">→</div>
 <div class="node"><b>cqlc-core</b>lexer, parser, resolver, type checker</div><div class="arrow">→</div>
@@ -47,16 +58,15 @@ The cqlz family: cqlc (schema-first codegen), cqlx (code-first ORM) and cql-ai (
 <div class="node"><b>cqlc-core lexer</b>fixed integer ids</div><div class="arrow">→</div>
 <div class="node"><b>cql-ai</b>Transformer, CI warnings</div>
 </div>
-<p class="sub">cqlc-core is the shared foundation: cqlx's CLI parses existing schemas with it and verifies generated DDL against it, and cql-ai uses its lexer as the tokenizer and its analyzer as the source of training labels.</p>
 </div></section>
 
 <section><div class="wrap">
-<h2>Which one do I use?</h2>
-<table>
-<tr><th>If you…</th><th>use</th></tr>
-<tr><td>already own the schema and want your queries checked and typed before they run</td><td><a href="cqlc.html">cqlc</a></td></tr>
-<tr><td>prefer Rust structs as the source of truth and want inserts and reads without writing CQL</td><td><a href="cqlx.html">cqlx</a></td></tr>
-<tr><td>want a fast CI gate that warns about full scans, <code>ALLOW FILTERING</code> and collection overwrites</td><td><a href="cql-ai.html">cql-ai</a></td></tr>
-<tr><td>want numbers</td><td><a href="benchmarks.html">benchmarks</a></td></tr>
-</table>
+<div class="eyebrow">Alpha research</div>
+<h2>Learned table design</h2>
+<p class="sub"><a href="research.html">cqlz-gym</a> designs Cassandra tables for a workload, with <code>cqlc-core</code> as the exact verifier and a small neural policy as the search. On 80–150-query workloads an exact baseline never finishes while the policy lands within 0.2 % of the best known design in 0.3 s. Alpha, with caveats.</p>
+<div class="stats">
+<div><div class="stat">0.3 s<small>policy, 80–150 queries</small></div></div>
+<div><div class="stat">0 / 8<small>exact solver finished in 15 s</small></div></div>
+<div><div class="stat">227k<small>environment steps/s per core</small></div></div>
+</div>
 </div></section>
