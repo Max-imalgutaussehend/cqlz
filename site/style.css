@@ -106,3 +106,24 @@ footer { border-top: 1px solid var(--line); margin-top: 40px; padding: 36px 0 56
 footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 28px; justify-content: space-between; }
 footer a { color: var(--text); }
 @media (max-width: 560px) { body { font-size: 16px; } .hero { padding-top: 64px; } }
+
+/* verdicts: blue = better than the baseline, grey = baseline, orange = worse, light = equal */
+.chart.wide .row { grid-template-columns: 200px 1fr 190px; }
+.chart .row.win .bar { background: var(--blue); } .chart .row.win .lab, .chart .row.win .val { color: var(--blue); font-weight: 600; }
+.chart .row.base .bar { background: #6b5b57; }
+.chart .row.lose .bar { background: var(--orange); } .chart .row.lose .lab, .chart .row.lose .val { color: var(--orange); font-weight: 600; }
+.chart .row.tie .bar { background: #c9bcb6; } .chart .row.tie .lab, .chart .row.tie .val { font-weight: 600; }
+.chart .grp { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 18px 0 2px; border-top: 1px solid var(--line); padding-top: 10px; }
+.chart .track { position: relative; }
+.chart .track.ref::after { content: ""; position: absolute; left: 90.9%; top: -4px; bottom: -4px; border-left: 1px dashed var(--muted); }
+.badge { display: inline-block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; padding: 3px 8px; border-radius: 3px; border: 1px solid; white-space: nowrap; }
+.badge.win { color: #0c1a22; background: var(--blue); border-color: var(--blue); }
+.badge.lose { color: #1a0a04; background: var(--orange); border-color: var(--orange); }
+.badge.tie { color: var(--text); border-color: var(--muted); }
+.badge.na { color: var(--muted); border-color: var(--line2); }
+.verdict { display: flex; gap: 14px; align-items: flex-start; background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 18px; margin: 0 0 24px; font-size: 15px; }
+.verdict > div { color: var(--muted); } .verdict b { color: var(--text); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); margin: 0 0 18px; align-items: center; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+table.score td:first-child { white-space: nowrap; font-weight: 600; }
+@media (max-width: 640px) { .chart.wide .row { grid-template-columns: 100px 1fr 120px; } .verdict { flex-direction: column; } }
