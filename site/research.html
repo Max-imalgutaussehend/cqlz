@@ -16,8 +16,8 @@
 <main>
 <div class="wrap hero">
 <h1>Research <b>α</b></h1>
-<p class="lead">Early proposals that connect the family to machine learning and HPC. They are plans with pre-registered failure criteria, not results: nothing below has been implemented or measured.</p>
-<div class="btns"><a class="btn primary" href="https://github.com/Max-imalgutaussehend/cqlz/blob/main/research/CQL-GYM.md">CQL-Gym proposal</a><a class="btn" href="https://github.com/Max-imalgutaussehend/cqlz/blob/main/research/CQL-ROOFLINE.md">CQL-Roofline proposal</a></div>
+<p class="lead">Early research that connects the family to machine learning and HPC. CQL-Gym has a first alpha prototype with measured results; CQL-Roofline is still only a plan. Both have pre-registered failure criteria.</p>
+<div class="btns"><a class="btn primary" href="https://github.com/Max-imalgutaussehend/cqlz-lab">Code: cqlz-lab</a><a class="btn" href="https://github.com/Max-imalgutaussehend/cqlz/blob/main/research/CQL-GYM.md">CQL-Gym proposal</a><a class="btn" href="https://github.com/Max-imalgutaussehend/cqlz/blob/main/research/CQL-ROOFLINE.md">CQL-Roofline proposal</a></div>
 </div>
 
 <section><div class="wrap">
@@ -44,7 +44,16 @@
 <tr><td>E4</td><td>1 to N cores</td><td>itself</td><td>steps/s per core, scaling</td></tr>
 </table>
 <h3>What would make it wrong</h3>
-<p class="sub">Decided in advance: we drop or reframe the idea if the policy's median cost is more than 20 % above the ILP optimum where the ILP is solvable <em>and</em> it does not beat the greedy baseline at equal wall time where the ILP times out, or if environment throughput stays below 10<sup>4</sup> steps/s per core after optimisation.</p>
+<p class="sub">Decided in advance: we drop or reframe the idea (none of these triggered in the first run) if the policy's median cost is more than 20 % above the ILP optimum where the ILP is solvable <em>and</em> it does not beat the greedy baseline at equal wall time where the ILP times out, or if environment throughput stays below 10<sup>4</sup> steps/s per core after optimisation.</p>
+<h3>First results (alpha prototype)</h3>
+<table>
+<tr><th>Workload</th><th>greedy</th><th>exact B&amp;B</th><th>learned policy</th><th>exact solved</th></tr>
+<tr><td>8–16 queries</td><td class="num">1.008</td><td class="num">1.000</td><td class="num">1.000</td><td class="num">8/8</td></tr>
+<tr><td>25–50 queries</td><td class="num">1.037</td><td class="num">1.003</td><td class="num">1.002</td><td class="num">7/8</td></tr>
+<tr><td>80–150 queries</td><td class="num">1.060</td><td class="num">1.038</td><td class="num"><b>1.002</b></td><td class="num">0/8</td></tr>
+</table>
+<p class="sub">Mean of cost divided by the best cost any method found on the same instance (1.000 = best). At 80–150 queries the exact solver gets 15 s and never finishes; the policy's argmax rollout takes 0.31 s on one CPU core. The environment runs at about 227,000 steps/s per core, and each <code>cqlc-core</code> verification call costs about 3.6 µs. Install: <code>cargo install cqlz-gym</code> (alpha, not yet published).</p>
+<div class="note">Caveats: the exact baseline is a simple branch-and-bound, not an integer-programming solver such as NoSE's, so a good ILP may close the gap. The cost model is synthetic and not calibrated on a cluster. Test workloads come from the same generator as training, so this shows generalisation to larger sizes only. Multi-core scaling was not measured.</div>
 <h3>Related work</h3>
 <p class="sub">NoSE (above) is the baseline and the source of the problem formulation. Neural combinatorial optimisation (Bello et al., 2016; Kool, van Hoof, Welling, ICLR 2019) trains attention policies with RL on combinatorial problems; the twist here is an exact, cheap constraint checker from a real compiler front end. Brax (Freeman et al., 2021) is the precedent for making the environment the scalable part. Closest existing RL work: <a href="https://arxiv.org/pdf/2006.08842">index selection for NoSQL</a> and <a href="https://arxiv.org/pdf/2109.00136">relational schemas for multi-model data</a>. Learned LSM cost models such as <a href="https://www.vldb.org/pvldb/vol18/p5582-huynh.pdf">AXE (VLDB 2025)</a> and <a href="https://arxiv.org/pdf/2409.15130v1">CAMAL</a> are candidates to replace the synthetic cost model.</p>
 <div class="note">Limits: the reward is a cost model, not a measurement, and a policy can exploit its errors, so final designs must be checked on a real ScyllaDB. Everything starts single-node on an Apple M3; scaling claims need a many-core machine.</div>

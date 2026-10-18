@@ -1,6 +1,7 @@
 # CQL-Gym: verifier-in-the-loop reinforcement learning for Cassandra data modelling (alpha research proposal)
 
-**Status: alpha / proposal. Nothing here is implemented or measured yet.**
+**Status: alpha. A first prototype exists and was measured: [`cqlz-gym`](https://github.com/Max-imalgutaussehend/cqlz-lab/tree/main/crates/cqlz-gym)
+(cargo) with a trained policy (Hugging Face). Results and caveats are in its README; summary at the end of this document.**
 
 ## Question
 
@@ -90,3 +91,19 @@ multi-core scaling claims need a many-core machine.
 2. Baselines: greedy, random, ILP.
 3. Policy and training in Burn; E1–E3.
 4. Scaling study E4; decide whether it merits a write-up.
+
+## First results (alpha prototype)
+
+Measured on an Apple M3, one CPU core, synthetic workloads and a synthetic cost model (details and caveats in the
+[`cqlz-gym` README](https://github.com/Max-imalgutaussehend/cqlz-lab/tree/main/crates/cqlz-gym)):
+
+* **E1** (4–16 queries): the exact branch-and-bound solves every instance in under 10 ms; the policy matches it. At these
+  sizes the problem is easy and learning adds nothing.
+* **E2** (80–150 queries): the exact solver never finishes (0/8 within 15 s) and its incumbent is ~3.8 % above the best design
+  found; greedy is ~6 % above; the policy's argmax rollout takes 0.31 s and is within 0.2 % of the best known.
+* **E3**: evaluation workloads come from the same generator as training (new seeds, larger sizes), so this is size
+  generalisation only, not generalisation to real workloads.
+* **E4**: the environment runs ≈ 227,000 steps/s on one core (premise ≥ 10⁴ holds); verification costs ≈ 3.6 µs per `cqlc-core`
+  call. Multi-core scaling is not measured.
+* **Falsification criteria:** none triggered. Main open weaknesses: the exact baseline is a simple branch-and-bound, not an
+  integer-programming solver; the cost model is not calibrated against a cluster.
