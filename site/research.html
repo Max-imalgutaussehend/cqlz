@@ -23,7 +23,7 @@
 <section><div class="wrap">
 <h2>CQL-Gym</h2>
 <p class="sub"><b>Question:</b> can a small neural policy, trained by self-play against <code>cqlc-core</code> as an exact verifier, find good Cassandra table designs faster than integer programming, and keep working at workload sizes where the integer program stops being solvable?</p>
-<div class="note">Status: alpha proposal. Related work below is cited from memory and not yet verified; we found no prior work on learned policies for Cassandra schema design, but that rests on our own searches, not a literature review.</div>
+<div class="note">Status: alpha proposal. Related work was found by web search (titles and abstracts, not read in full). We found RL for NoSQL index selection and for relational schemas, but none for Cassandra schema design; that rests on a handful of searches, not a literature review.</div>
 <h3>The idea</h3>
 <p class="sub">Data modelling in Cassandra means choosing denormalised tables so every query is a cheap single-partition read. The standard automated approach, NoSE (Mior, Salem, Aboulnaga, Liu, IEEE TKDE 2017), solves a binary integer program. Here a policy builds the design step by step, and the cqlc analyzer decides after each step whether a query is valid and warning-free against the proposed schema. Invalid actions are masked, so every design the policy proposes is valid by construction, and the reward needs no labelled data.</p>
 <div class="diagram">
@@ -46,7 +46,7 @@
 <h3>What would make it wrong</h3>
 <p class="sub">Decided in advance: we drop or reframe the idea if the policy's median cost is more than 20 % above the ILP optimum where the ILP is solvable <em>and</em> it does not beat the greedy baseline at equal wall time where the ILP times out, or if environment throughput stays below 10<sup>4</sup> steps/s per core after optimisation.</p>
 <h3>Related work</h3>
-<p class="sub">NoSE (above) is the baseline and the source of the problem formulation. Neural combinatorial optimisation (Bello et al., 2016; Kool, van Hoof, Welling, ICLR 2019) trains attention policies with RL on combinatorial problems; the twist here is an exact, cheap constraint checker from a real compiler front end. Brax (Freeman et al., 2021) is the precedent for making the environment the scalable part.</p>
+<p class="sub">NoSE (above) is the baseline and the source of the problem formulation. Neural combinatorial optimisation (Bello et al., 2016; Kool, van Hoof, Welling, ICLR 2019) trains attention policies with RL on combinatorial problems; the twist here is an exact, cheap constraint checker from a real compiler front end. Brax (Freeman et al., 2021) is the precedent for making the environment the scalable part. Closest existing RL work: <a href="https://arxiv.org/pdf/2006.08842">index selection for NoSQL</a> and <a href="https://arxiv.org/pdf/2109.00136">relational schemas for multi-model data</a>. Learned LSM cost models such as <a href="https://www.vldb.org/pvldb/vol18/p5582-huynh.pdf">AXE (VLDB 2025)</a> and <a href="https://arxiv.org/pdf/2409.15130v1">CAMAL</a> are candidates to replace the synthetic cost model.</p>
 <div class="note">Limits: the reward is a cost model, not a measurement, and a policy can exploit its errors, so final designs must be checked on a real ScyllaDB. Everything starts single-node on an Apple M3; scaling claims need a many-core machine.</div>
 </div></section>
 

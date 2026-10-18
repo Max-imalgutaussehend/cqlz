@@ -23,7 +23,7 @@ workload sizes where the integer program stops being solvable?
 * **Stack already exists:** Rust environment on `cqlc-core`; policy in Burn (we already have a small
   Transformer encoder over lexer tokens in `cql-ai-model`); designs can be emitted as `cqlx` entities.
 
-## Related work (cited from memory, to be verified in milestone 0)
+## Related work
 
 * **NoSE** (Mior, Salem, Aboulnaga, Liu; IEEE TKDE 2017): Cassandra schema selection by binary integer
   programming. This is the baseline to beat or match, and the source of the problem formulation.
@@ -34,8 +34,18 @@ workload sizes where the integer program stops being solvable?
 * **Throughput-oriented RL environments**: Freeman et al., *Brax* (2021), as precedent for making the
   environment, not the learner, the scalable part.
 
-We did not find prior work applying learned policies to Cassandra schema design (our searches only, not a
-literature review).
+Found in a quick web search (titles and abstracts only, not read in full):
+
+* **RL for NoSQL physical design exists, but not for schema design:** *Index Selection for NoSQL Database with
+  Deep Reinforcement Learning* ([arXiv:2006.08842](https://arxiv.org/pdf/2006.08842)); RL for *relational* schemas of
+  multi-model data (MORTAL, [arXiv:2109.00136](https://arxiv.org/pdf/2109.00136)).
+* **Learned cost models for LSM stores:** AXE (Huynh et al., [VLDB 2025](https://www.vldb.org/pvldb/vol18/p5582-huynh.pdf))
+  and CAMAL ([arXiv:2409.15130](https://arxiv.org/pdf/2409.15130v1), SIGMOD 2024). Candidates for replacing our synthetic cost model.
+* **Workload generation:** Tectonic (TPCTC 2025, Rust, dynamic workloads) and KVBench; the Facebook RocksDB study (FAST '20)
+  shows YCSB misses key-space locality, which matters for a realistic workload prior.
+
+We found no work applying learned policies to Cassandra schema design (partition keys, denormalisation, table
+layout); this is from a handful of searches, not a literature review.
 
 ## Formulation (sketch)
 
