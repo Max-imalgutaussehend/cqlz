@@ -12,6 +12,16 @@ cql-ai-model = { git = "https://github.com/Max-imalgutaussehend/cql-ai" }
 burn = { version = "0.22", default-features = false, features = ["std", "flex"] }
 sqlparser = "0.63"
 
+cqlx = "0.1"
+scylla = "1.9"
+charybdis = "1.1"
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
+testcontainers = "0.28"
+rand = "0.9"
+rand_distr = "0.5"
+hdrhistogram = "7"
+
 [dev-dependencies]
 criterion = "0.8"
 
@@ -26,3 +36,11 @@ harness = false
 [[bin]]
 name = "token_stats"
 path = "src/bin/token_stats.rs"
+
+[[bin]]
+name = "realworld"
+path = "src/bin/realworld.rs"
+
+[[bin]]
+name = "ycsb"
+path = "src/bin/ycsb.rs"
