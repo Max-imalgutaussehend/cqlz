@@ -8,10 +8,13 @@ PAGES = [
     ("cqlx.html", "cqlx"),
     ("cql-ai.html", "cql-ai"),
     ("cqlz-gym.html", "cqlz-gym"),
+    ("cqlint.html", "cqlint"),
+    ("cql-migrate.html", "migrate"),
+    ("cqlprof.html", "cqlprof"),
     ("benchmarks.html", "Benchmarks"),
     ("examples.html", "Examples"),
 ]
-ICONS = {"cqlc.html": "cqlc", "cqlx.html": "cqlx", "cql-ai.html": "cql-ai", "cqlz-gym.html": "cqlz-gym"}
+ICONS = {"cqlc.html": "cqlc", "cqlx.html": "cqlx", "cql-ai.html": "cql-ai", "cqlz-gym.html": "cqlz-gym", "cqlint.html": "cqlint", "cql-migrate.html": "cql-migrate", "cqlprof.html": "cqlprof"}
 ALL = [("index.html", "Family")] + PAGES
 
 def page(slug, title, desc, body):
@@ -36,7 +39,7 @@ def page(slug, title, desc, body):
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="topbar"><b>NEW</b> &nbsp;cqlc 1.1 for Cassandra 5, cqlx 1.0, CQL HPC bottleneck detection and an ILP-backed schema designer &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
+<div class="topbar"><b>NEW</b> &nbsp;New: cqlint (lint + format), cql-migrate and cqlprof &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
 <header class="nav"><div class="wrap">
 <a class="brand" href="index.html"><img src="logos/icon-cqlz.png" alt="" width="34" height="34">cqlz <b>family</b></a>{nav}
 <span class="spacer"></span>
@@ -47,7 +50,7 @@ def page(slug, title, desc, body):
 {body}
 </main>
 <footer><div class="wrap">
-<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="cqlz-gym.html">cqlz-gym</a>. Apache-2.0.</span>
+<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="cqlz-gym.html">cqlz-gym</a> · <a href="cqlint.html">cqlint</a> · <a href="cql-migrate.html">cql-migrate</a> · <a href="cqlprof.html">cqlprof</a>. Apache-2.0.</span>
 <span>Built by <a href="https://github.com/Max-imalgutaussehend">Max-imalgutaussehend</a></span>
 </div></footer>
 </body>

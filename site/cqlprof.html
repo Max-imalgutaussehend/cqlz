@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cqlprof: EXPLAIN for CQL</title>
+<meta name="description" content="cqlprof runs SELECT statements with tracing on Cassandra and ScyllaDB and reports tombstones, sstables, replicas, slow steps and latency percentiles.">
+<meta name="theme-color" content="#171010">
+<link rel="icon" type="image/png" href="logos/favicon-cqlprof.png">
+<link rel="apple-touch-icon" href="logos/icon-cqlprof.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="topbar"><b>NEW</b> &nbsp;New: cqlint (lint + format), cql-migrate and cqlprof &rarr; <a href="benchmarks.html">see the benchmarks</a></div>
+<header class="nav"><div class="wrap">
+<a class="brand" href="index.html"><img src="logos/icon-cqlz.png" alt="" width="34" height="34">cqlz <b>family</b></a><a class="link" href="cqlc.html">cqlc</a><a class="link" href="cqlx.html">cqlx</a><a class="link" href="cql-ai.html">cql-ai</a><a class="link" href="cqlz-gym.html">cqlz-gym</a><a class="link" href="cqlint.html">cqlint</a><a class="link" href="cql-migrate.html">migrate</a><a class="link" href="cqlprof.html" aria-current="page">cqlprof</a><a class="link" href="benchmarks.html">Benchmarks</a><a class="link" href="examples.html">Examples</a>
+<span class="spacer"></span>
+<a class="chip" href="https://github.com/Max-imalgutaussehend/cqlz">GitHub</a>
+<a class="chip cta" href="cqlc.html">Get started</a>
+</div></header>
+<main>
+<div class="hero left"><div class="split">
+<img class="logo" src="logos/cqlprof.png" alt="cqlprof logo: the Rust crab with a stopwatch badge">
+<div>
+<h1>cql<b>prof</b></h1>
+<p class="lead">Cassandra has no EXPLAIN, but it has tracing. cqlprof reads the trace and says where the time and the work went.</p>
+<div class="btns"><a class="btn primary" href="https://github.com/Max-imalgutaussehend/cqlprof">GitHub</a><a class="btn" href="https://crates.io/crates/cqlprof">crates.io</a></div>
+<div class="install"><i>$</i> cargo install cqlprof</div>
+</div></div></div>
+<section><div class="wrap"><div class="eyebrow">Output</div><h2>A trace, explained</h2><div class="gfx"><div class="panel wide"><h4>Example</h4><p class="one">5,000 deleted rows in one partition</p><pre><code><span class=k>SELECT</span> * <span class=k>FROM</span> pf.q <span class=k>WHERE</span> pk = 1
+  client latency   p50 1.11 ms   p99 1.95 ms
+  trace (scylla)   server 833 µs, 1 replica targeted
+  work             10 live row(s), <span class=k>2990 tombstone(s)</span>
+  warning [PROF001] scanned 2990 tombstones to return 10 live rows</code></pre></div><div class="panel"><h4>Findings</h4><p class="one">from the trace, not from guessing</p><div class="key" style="gap:8px 10px;margin-top:10px"><span class="badge lose">PROF001 tombstone-scan</span><span class="badge lose">PROF002 many-sstables</span><span class="badge lose">PROF003 large-read</span><span class="badge lose">PROF004 slow-statement</span><span class="badge lose">PROF005 tail-latency</span><span class="badge tie">PROF006 lightweight-transaction</span></div></div><div class="panel"><h4>Engines</h4><p class="one">trace parsing tested on real traces</p><div class="key" style="gap:8px 10px;margin-top:10px"><span class="badge win">ScyllaDB</span><span class="badge win">Cassandra 5.0</span><span class="badge tie">Cassandra 4.x</span></div></div></div></div></section><section><div class="wrap"><div class="eyebrow">Safe to run</div><h2>Bounded and read-only by default</h2><div class="tiles"><div class="tile"><div class="n win">SELECT</div><div class="t">only reads run; writes need --allow-writes</div></div><div class="tile"><div class="n win">1 page</div><div class="t">a missing LIMIT cannot scan the table</div></div><div class="tile"><div class="n tie">sampled</div><div class="t">? markers get values from a real row</div></div><div class="tile"><div class="n tie">p50 / p99</div><div class="t">untraced repetitions, first run dropped</div></div></div></div></section><section><div class="wrap"><div class="eyebrow">Use</div><h2>One command</h2><pre><code>cqlprof -e "SELECT * FROM shop.orders WHERE customer = 1"
+cqlprof queries/*.cql -k shop --repeat 100 --format json</code></pre></div></section>
+
+</main>
+<footer><div class="wrap">
+<span>The cqlz family: <a href="cqlc.html">cqlc</a> · <a href="cqlx.html">cqlx</a> · <a href="cql-ai.html">cql-ai</a> · <a href="cqlz-gym.html">cqlz-gym</a> · <a href="cqlint.html">cqlint</a> · <a href="cql-migrate.html">cql-migrate</a> · <a href="cqlprof.html">cqlprof</a>. Apache-2.0.</span>
+<span>Built by <a href="https://github.com/Max-imalgutaussehend">Max-imalgutaussehend</a></span>
+</div></footer>
+</body>
+</html>

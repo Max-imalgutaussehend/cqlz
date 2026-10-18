@@ -146,6 +146,17 @@ gym = sect("cqlz-gym", "An exact ILP wins; the design pays off on a real databas
     panel("Environment steps per second, M steps/s", "91 % efficient on 4 threads; 8 threads use the efficiency cores", scale, key([("measured", BL), ("ideal", GR)])),
 ], det("Table: cost relative to best, by workload size", "<table><tr><th>Queries</th><th class='num'>greedy</th><th class='num'>B&amp;B</th><th class='num'>ILP</th><th class='num'>learned</th></tr><tr><td>4–7</td><td class='num'>1.095</td><td class='num'>1.000</td><td class='num'>1.000</td><td class='num'>1.000</td></tr><tr><td>8–16</td><td class='num'>1.009</td><td class='num'>1.000</td><td class='num'>1.000</td><td class='num'>1.003</td></tr><tr><td>25–50</td><td class='num'>1.054</td><td class='num'>1.001</td><td class='num'>1.000</td><td class='num'>1.005</td></tr><tr><td>80–150</td><td class='num'>1.117</td><td class='num'>1.078</td><td class='num'>1.000</td><td class='num'>1.006</td></tr></table>"))
 
+
+lint_bars = vbars([("lint", [97]), ("format --check", [44])], [("MB/s", BL)], 120, "{:.0f}", h=190)
+tools = sect("cqlint", "Fast enough to run on every save", "", [
+    panel("Throughput, MB of CQL per second", "3,600 files, 23.3 MB, 79,200 statements", lint_bars, '<div class="txt">Apple M3, 8 cores. No comparable CQL linter or formatter exists to measure against: absolute numbers only.</div>'),
+    panel("Statements per second", "lint 330k, format check 150k", versus("0.24 s", "0.53 s", ("lint", "format --check"), "1 run each", wins=True)),
+    panel("Formatter safety", "tokens and comments unchanged, idempotent", donut(1, "25/25", "real files", BL), '<div class="txt">KillrVideo (v3 to v5) and cqlc example files; plus 190 benchmark statements.</div>'),
+])
+verified = sect("cql-migrate, cqlprof", "Correctness is the benchmark", "", [
+    panel("Integration tests against real databases", "all pass", '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px">' + donut(1, "4/4", "ScyllaDB", BL) + donut(1, "4/4", "Cassandra 5.0", BL) + "</div>", '<div class="txt">cql-migrate: lifecycle, failure and resolve, lock, drift. cqlprof: tombstone detection, bound values, JSON.</div>'),
+    panel("cqlprof detects what it should", "10 live rows + 2,990 deleted rows in one partition", versus("2,990", "10", ("tombstones found", "live rows returned"), "PROF001", wins=True), '<div class="txt">Same result on ScyllaDB and Cassandra 5.0; the clean partition raises no finding.</div>'),
+])
 repro = """<section><div class="wrap"><div class="eyebrow">Reproduce</div><h2>Run it yourself</h2>
 <pre><code>git clone https://github.com/Max-imalgutaussehend/cqlz &amp;&amp; cd cqlz/benchmarks
 cargo bench --bench frontend        <span class="c"># cqlc vs sqlparser</span>
@@ -158,4 +169,5 @@ cargo run --release -p cqlz-gym -- eval --policy artifacts --instances 8 --exact
 cargo run --release -p cqlz-gym -- bench</code></pre>
 <details><summary>Data sources and what is not measured</summary><div class="in"><p class="sub">KillrVideo schemas and queries (Apache-2.0), YCSB core workloads A/B/C, NoSQLBench (cql-keyvalue2, cql-tabular2, cql-iot, cql-timeseries2), cassandra-stress profiles, TSBS CPU table, DataStax data-modelling examples (shapes of the gym workloads). Not measured: cluster throughput, multi-node scaling, tail latency under overload, one machine only.</p></div></details>
 </div></section>"""
-(HERE / "benchmarks.html").write_text(head + "\n" + glance + "\n" + cqlc + "\n" + cqlx + "\n" + cqlai + "\n" + gym + "\n" + repro + "\n")
+if __name__ == "__main__":
+    (HERE / "benchmarks.html").write_text(head + "\n" + glance + "\n" + cqlc + "\n" + cqlx + "\n" + cqlai + "\n" + gym + "\n" + tools + "\n" + verified + "\n" + repro + "\n")

@@ -1,0 +1,21 @@
+cqlint: a very fast linter and formatter for CQL
+---
+cqlint formats CQL and finds performance and safety problems (ALLOW FILTERING, tombstone writes, unbounded scans) in Cassandra and ScyllaDB projects.
+---
+<div class="hero left"><div class="split">
+<img class="logo" src="logos/cqlint.png" alt="cqlint logo: the Rust crab with a check mark badge">
+<div>
+<h1>cql<b>int</b></h1>
+<p class="lead">Format CQL and catch the statements that hurt at scale, in milliseconds. Built on the lexer of cqlc.</p>
+<div class="btns"><a class="btn primary" href="https://github.com/Max-imalgutaussehend/cqlint">GitHub</a><a class="btn" href="https://crates.io/crates/cqlint">crates.io</a></div>
+<div class="install"><i>$</i> cargo install cqlint</div>
+</div></div></div>
+<section><div class="wrap"><div class="eyebrow">Format</div><h2>One layout, safe by construction</h2><div class="gfx"><div class="panel"><h4>Before</h4><p class="one">any style</p><pre><code>select id,name from ks.users where id = ? and name &gt; 'a' order by name desc limit 10;</code></pre></div><div class="panel"><h4>After</h4><p class="one">keywords, clauses, wrapping, comments kept</p><pre><code><span class=k>SELECT</span> id, name
+<span class=k>FROM</span> ks.users
+<span class=k>WHERE</span> id = ?
+  <span class=k>AND</span> name &gt; 'a'
+<span class=k>ORDER BY</span> name <span class=k>DESC</span>
+<span class=k>LIMIT</span> 10;</code></pre></div><div class="panel"><h4>Safety net</h4><p class="one">tokens and comments must be unchanged</p><svg viewBox="0 0 150 150" style="max-width:170px;margin:auto" role="img" aria-label="100 % idempotent"><circle cx="75.0" cy="75.0" r="52" stroke="#6b5b57" stroke-opacity=".35" stroke-width="16" fill="none"/><circle cx="75.0" cy="75.0" r="52" stroke="var(--blue)" stroke-width="16" fill="none"/><text x="75.0" y="77.0" text-anchor="middle" class="big">100 %</text><text x="75.0" y="95.0" text-anchor="middle" class="m">idempotent</text></svg><div class="txt">Checked on real KillrVideo and cqlc files; if the token stream would change, the file is left alone.</div></div></div></div></section><section><div class="wrap"><div class="eyebrow">Lint</div><h2>13 rules for CQL that does not scale</h2><div class="gfx"><div class="panel"><h4>Rules</h4><p class="one">red = warning, white = note, blue = fixable</p><div class="key" style="gap:8px 10px;margin-top:10px"><span class="badge lose">allow-filtering</span><span class="badge lose">select-star</span><span class="badge lose">unbounded-select</span><span class="badge lose">count-scan</span><span class="badge lose">large-in</span><span class="badge lose">large-batch</span><span class="badge lose">native-secondary-index</span><span class="badge tie">lightweight-transaction</span><span class="badge lose">destructive</span><span class="badge win">non-idempotent-ddl (fixable)</span><span class="badge tie">list-column</span><span class="badge lose">null-write</span><span class="badge lose">wide-table</span></div></div><div class="panel"><h4>Type-aware</h4><p class="one"><code>--schema schema/</code> adds cqlc-core checks</p><div class="diagram"><div class="node"><b>statement</b>from your .cql</div><div class="arrow">→</div><div class="node"><b>schema</b>unknown column, type mismatch, missing partition key</div></div></div></div></div></section><section><div class="wrap"><div class="eyebrow">Speed</div><h2>3,600 files in a quarter of a second</h2><div class="tiles"><div class="tile"><div class="n win">0.24 s</div><div class="t">lint, 3,600 files, 23 MB</div></div><div class="tile"><div class="n win">0.53 s</div><div class="t">format check, same files</div></div><div class="tile"><div class="n tie">330k</div><div class="t">statements per second, lint</div></div><div class="tile"><div class="n tie">8 cores</div><div class="t">Apple M3, rayon</div></div></div></div></section><section><div class="wrap"><div class="eyebrow">CI</div><h2>Three lines</h2><pre><code><span class=c># .github/workflows</span>
+- run: cargo install cqlint
+- run: cqlint format --check .
+- run: cqlint check --output-format github .</code></pre></div></section>

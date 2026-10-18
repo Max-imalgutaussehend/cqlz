@@ -1,18 +1,18 @@
 cqlz: typesafe tooling for Cassandra and ScyllaDB
 ---
-The cqlz family: cqlc (schema-first codegen), cqlx (code-first ORM), cql-ai (CQL performance-bottleneck detector) and cqlz-gym (schema design with an exact verifier) for Cassandra and ScyllaDB, in Rust.
+The cqlz family: cqlc (schema-first codegen), cqlx (code-first ORM), cql-ai (CQL performance-bottleneck detector) and cqlz-gym (schema design with an exact verifier), cqlint, cql-migrate and cqlprof for Cassandra and ScyllaDB, in Rust.
 ---
 <div class="hero">
 <img class="logo" src="logos/cqlz.png" alt="cqlz family logo: the Rust crab with the Cassandra eye" style="margin:0 auto 12px;display:block">
 <h1>Typesafe <b>CQL</b>.<br>Written in Rust.</h1>
-<p class="lead">Four small tools that move mistakes and slowdowns in Cassandra and ScyllaDB queries from production to compile time and CI: typed, checked against current Cassandra, and measured for performance.</p>
+<p class="lead">Seven small tools that move mistakes and slowdowns in Cassandra and ScyllaDB queries from production to compile time and CI: typed, checked against current Cassandra, and measured for performance.</p>
 <div class="btns"><a class="btn primary" href="cqlc.html">Get started</a><a class="btn" href="benchmarks.html">Benchmarks</a><a class="btn" href="examples.html">Examples</a></div>
 <div class="install"><i>$</i> cargo install cqlc</div>
 </div>
 
 <section class="first"><div class="wrap">
 <div class="eyebrow">The family</div>
-<h2>Four tools, one foundation</h2>
+<h2>Seven tools, one foundation</h2>
 <p class="sub">All of them build on the ScyllaDB Rust driver and <code>cqlc-core</code>, the lexer, parser, schema resolver and type checker that checks every statement.</p>
 <div class="grid">
 <div class="card"><span class="tag">Schema-first</span><h3>cqlc</h3>
@@ -31,6 +31,18 @@ The cqlz family: cqlc (schema-first codegen), cqlx (code-first ORM), cql-ai (CQL
 <p>Give it entities and a query workload; it designs the Cassandra tables. An exact ILP and a small learned policy search, <code>cqlc-core</code> verifies every candidate.</p>
 <div class="stat">+8 %<small>+8 %SMALL</small></div><br>
 <a class="more" href="cqlz-gym.html">Read more →</a></div>
+<div class="card"><span class="tag">Lint + format</span><h3>cqlint</h3>
+<p>A ruff for CQL: formats your files and flags ALLOW FILTERING, tombstone writes, unbounded scans and more. Type-aware with your schema.</p>
+<div class="stat">0.24 s<small>to lint 3,600 files (23 MB)</small></div><br>
+<a class="more" href="cqlint.html">Read more →</a></div>
+<div class="card"><span class="tag">Migrations</span><h3>cql-migrate</h3>
+<p>Ordered, checksummed, locked schema migrations with offline chain checks, schema diff and live drift detection.</p>
+<div class="stat">2 engines<small>lifecycle tested on ScyllaDB and Cassandra 5.0</small></div><br>
+<a class="more" href="cql-migrate.html">Read more →</a></div>
+<div class="card"><span class="tag">Profiling</span><h3>cqlprof</h3>
+<p>EXPLAIN for CQL: runs a SELECT with tracing and tells you about tombstones, sstables, replicas and tail latency.</p>
+<div class="stat">PROF001<small>found 2,990 tombstones behind 10 live rows</small></div><br>
+<a class="more" href="cqlprof.html">Read more →</a></div>
 </div>
 </div></section>
 

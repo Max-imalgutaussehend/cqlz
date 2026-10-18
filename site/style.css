@@ -151,3 +151,10 @@ details > .in { padding: 0 16px 14px; }
 .key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); margin-top: 8px; }
 .key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
 .panel .txt { font-size: 13px; color: var(--muted); margin-top: 10px; }
+
+/* nine nav entries: tighter links, secondary chips drop out on narrower screens */
+header.nav .wrap { gap: 16px; max-width: 1360px; }
+header.nav a.link { font-size: 12px; letter-spacing: .05em; }
+@media (max-width: 1240px) { header.nav .chip:not(.cta) { display: none; } }
+@media (max-width: 1040px) { header.nav .chip.cta { display: none; } }
+.panel pre { white-space: pre-wrap; word-break: break-word; }

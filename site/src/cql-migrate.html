@@ -1,0 +1,16 @@
+cql-migrate: schema migrations for Cassandra and ScyllaDB
+---
+cql-migrate applies ordered CQL migrations with checksums and a cluster-wide lock, checks the chain offline, generates diffs and detects schema drift.
+---
+<div class="hero left"><div class="split">
+<img class="logo" src="logos/cql-migrate.png" alt="cql-migrate logo: the Rust crab with an up-arrow badge">
+<div>
+<h1>cql-<b>migrate</b></h1>
+<p class="lead">Ordered, checksummed, locked schema migrations. Offline chain checks, schema diff and live drift detection.</p>
+<div class="btns"><a class="btn primary" href="https://github.com/Max-imalgutaussehend/cql-migrate">GitHub</a><a class="btn" href="https://crates.io/crates/cql-migrate">crates.io</a></div>
+<div class="install"><i>$</i> cargo install cql-migrate</div>
+</div></div></div>
+<section><div class="wrap"><div class="eyebrow">Workflow</div><h2>From file to cluster and back</h2><div class="diagram"><div class="node"><b>new</b>0007_add_email.cql</div><div class="arrow">→</div><div class="node"><b>verify</b>replay offline</div><div class="arrow">→</div><div class="node"><b>diff</b>schema/ vs migrations</div><div class="arrow">→</div><div class="node"><b>up</b>lock, apply, record</div><div class="arrow">→</div><div class="node"><b>drift</b>cluster vs migrations</div></div><div class="gfx"><div class="panel"><h4>State of every migration</h4><p class="one">status, with exit code 1 on problems</p><div class="key" style="gap:8px 10px;margin-top:10px"><span class="badge win">applied</span><span class="badge tie">pending</span><span class="badge lose">CHANGED</span><span class="badge lose">FAILED</span><span class="badge lose">RUNNING</span><span class="badge lose">MISSING</span></div></div><div class="panel"><h4>Tested on</h4><p class="one">full lifecycle in CI</p><div class="key" style="gap:8px 10px;margin-top:10px"><span class="badge win">ScyllaDB</span><span class="badge win">Cassandra 5.0</span><span class="badge tie">Cassandra 4.1 in CI</span></div><div class="txt">Apply, checksum protection, failure and resolve, lock, drift.</div></div></div></div></section><section><div class="wrap"><div class="eyebrow">Safe by design</div><h2>What it protects you from</h2><div class="tiles"><div class="tile"><div class="n win">SHA-256</div><div class="t">over tokens: comments and format do not matter</div></div><div class="tile"><div class="n win">LWT lock</div><div class="t">one runner at a time, TTL</div></div><div class="tile"><div class="n win">agreement</div><div class="t">waits after every DDL</div></div><div class="tile"><div class="n tie">no rollback</div><div class="t">DDL cannot be undone; failures are recorded</div></div></div></div></section><section><div class="wrap"><div class="eyebrow">In CI</div><h2>Keep schema files and migrations in sync</h2><pre><code>cql-migrate verify                 <span class=c># replay all migrations with cqlc-core</span>
+cql-migrate diff schema/           <span class=c># exit 1 if schema/ and migrations/ disagree</span>
+cql-migrate up                     <span class=c># lock, apply, record</span>
+cql-migrate drift                  <span class=c># did somebody ALTER production by hand?</span></code></pre></div></section>
