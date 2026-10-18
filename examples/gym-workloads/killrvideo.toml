@@ -1,0 +1,90 @@
+# KillrVideo access patterns (from the comments in the real 3.x schema): can cqlz-gym find a table set
+# comparable to the hand-designed one? The human design uses 14 tables for these and more patterns.
+[[entity]]
+name = "videos"
+rows = 2e6
+writes_per_s = 20
+attrs = [
+  { name = "videoid", ty = "uuid", width = 16, key = true },
+  { name = "userid", ty = "uuid", width = 16 },
+  { name = "name", ty = "text", width = 40 },
+  { name = "description", ty = "text", width = 300 },
+  { name = "preview_image_location", ty = "text", width = 80 },
+  { name = "added_date", ty = "timestamp", width = 8 },
+  { name = "yyyymmdd", ty = "text", width = 8 },
+]
+[[entity]]
+name = "users"
+rows = 5e5
+writes_per_s = 2
+attrs = [
+  { name = "userid", ty = "uuid", width = 16, key = true },
+  { name = "email", ty = "text", width = 30 },
+  { name = "firstname", ty = "text", width = 12 },
+  { name = "lastname", ty = "text", width = 14 },
+  { name = "created_date", ty = "timestamp", width = 8 },
+]
+[[entity]]
+name = "comments"
+rows = 2e7
+writes_per_s = 60
+attrs = [
+  { name = "commentid", ty = "timeuuid", width = 16, key = true },
+  { name = "videoid", ty = "uuid", width = 16 },
+  { name = "userid", ty = "uuid", width = 16 },
+  { name = "comment", ty = "text", width = 200 },
+]
+
+[[query]]
+name = "VideoById"
+entity = "videos"
+select = ["userid", "name", "description", "preview_image_location", "added_date"]
+eq = ["videoid"]
+weight = 900
+result_rows = 1
+[[query]]
+name = "VideosOfUser"
+entity = "videos"
+select = ["videoid", "name", "preview_image_location", "added_date"]
+eq = ["userid"]
+range = "added_date"
+order = "added_date"
+weight = 120
+result_rows = 10
+[[query]]
+name = "LatestVideosOfDay"
+entity = "videos"
+select = ["videoid", "userid", "name", "preview_image_location", "added_date"]
+eq = ["yyyymmdd"]
+range = "added_date"
+order = "added_date"
+weight = 400
+result_rows = 20
+[[query]]
+name = "UserById"
+entity = "users"
+select = ["firstname", "lastname", "email", "created_date"]
+eq = ["userid"]
+weight = 700
+result_rows = 1
+[[query]]
+name = "UserByEmail"
+entity = "users"
+select = ["userid", "firstname", "lastname"]
+eq = ["email"]
+weight = 150
+result_rows = 1
+[[query]]
+name = "CommentsOfVideo"
+entity = "comments"
+select = ["commentid", "userid", "comment"]
+eq = ["videoid"]
+weight = 300
+result_rows = 30
+[[query]]
+name = "CommentsOfUser"
+entity = "comments"
+select = ["commentid", "videoid", "comment"]
+eq = ["userid"]
+weight = 40
+result_rows = 30

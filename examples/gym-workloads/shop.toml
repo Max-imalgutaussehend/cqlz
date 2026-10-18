@@ -1,0 +1,81 @@
+# DataStax "data modeling by example": shopping cart and order management.
+[[entity]]
+name = "orders"
+rows = 3e8
+writes_per_s = 900
+attrs = [
+  { name = "order_id", ty = "uuid", width = 16, key = true },
+  { name = "customer_id", ty = "uuid", width = 16 },
+  { name = "placed_at", ty = "timestamp", width = 8 },
+  { name = "status", ty = "text", width = 10 },
+  { name = "total", ty = "double", width = 8 },
+  { name = "shipping_city", ty = "text", width = 20 },
+  { name = "notes", ty = "text", width = 300 },
+]
+[[entity]]
+name = "carts"
+rows = 2e7
+writes_per_s = 4000
+attrs = [
+  { name = "cart_id", ty = "uuid", width = 16, key = true },
+  { name = "customer_id", ty = "uuid", width = 16 },
+  { name = "updated_at", ty = "timestamp", width = 8 },
+  { name = "item_count", ty = "int", width = 4 },
+  { name = "subtotal", ty = "double", width = 8 },
+]
+
+[[query]]
+name = "OrderById"
+entity = "orders"
+select = ["customer_id", "placed_at", "status", "total", "shipping_city", "notes"]
+eq = ["order_id"]
+weight = 1500
+result_rows = 1
+[[query]]
+name = "OrdersOfCustomer"
+entity = "orders"
+select = ["order_id", "placed_at", "status", "total"]
+eq = ["customer_id"]
+range = "placed_at"
+order = "placed_at"
+weight = 600
+result_rows = 20
+[[query]]
+name = "OrderSummariesOfCustomer"
+entity = "orders"
+select = ["order_id", "total"]
+eq = ["customer_id"]
+weight = 80
+result_rows = 50
+[[query]]
+name = "OrdersByStatus"
+entity = "orders"
+select = ["order_id", "customer_id", "placed_at"]
+eq = ["status"]
+range = "placed_at"
+order = "placed_at"
+weight = 15
+result_rows = 200
+[[query]]
+name = "OrdersByCity"
+entity = "orders"
+select = ["order_id", "placed_at", "total"]
+eq = ["shipping_city"]
+range = "placed_at"
+order = "placed_at"
+weight = 8
+result_rows = 100
+[[query]]
+name = "CartById"
+entity = "carts"
+select = ["customer_id", "updated_at", "item_count", "subtotal"]
+eq = ["cart_id"]
+weight = 3000
+result_rows = 1
+[[query]]
+name = "CartOfCustomer"
+entity = "carts"
+select = ["cart_id", "item_count", "subtotal"]
+eq = ["customer_id"]
+weight = 900
+result_rows = 1

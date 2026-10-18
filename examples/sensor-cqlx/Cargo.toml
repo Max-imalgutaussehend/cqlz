@@ -1,0 +1,13 @@
+[package]
+name = "sensor-cqlx"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "cqlx example: IoT sensor telemetry, code-first, type-state queries, run against a live node"
+
+[dependencies]
+cqlx = "0.1"
+scylla = "1.9"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
+
+[workspace]

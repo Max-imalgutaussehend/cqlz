@@ -1,0 +1,74 @@
+# DataStax "data modeling by example", sensor model: sensors, networks and temperature readings.
+[[entity]]
+name = "readings"
+rows = 5e9
+writes_per_s = 20000
+attrs = [
+  { name = "sensor", ty = "text", width = 12, key = true },
+  { name = "ts", ty = "timestamp", width = 8, key = true },
+  { name = "network", ty = "text", width = 10 },
+  { name = "region", ty = "text", width = 8 },
+  { name = "temperature", ty = "double", width = 8 },
+  { name = "humidity", ty = "double", width = 8 },
+  { name = "battery", ty = "int", width = 4 },
+]
+[[entity]]
+name = "sensors"
+rows = 1e5
+writes_per_s = 1
+attrs = [
+  { name = "sensor", ty = "text", width = 12, key = true },
+  { name = "network", ty = "text", width = 10 },
+  { name = "region", ty = "text", width = 8 },
+  { name = "model", ty = "text", width = 16 },
+  { name = "installed", ty = "timestamp", width = 8 },
+]
+
+[[query]]
+name = "LatestOfSensor"
+entity = "readings"
+select = ["ts", "temperature", "humidity"]
+eq = ["sensor"]
+range = "ts"
+order = "ts"
+weight = 2000
+result_rows = 10
+[[query]]
+name = "NetworkOverview"
+entity = "readings"
+select = ["sensor", "ts", "temperature"]
+eq = ["network"]
+range = "ts"
+order = "ts"
+weight = 60
+result_rows = 200
+[[query]]
+name = "RegionTemperatures"
+entity = "readings"
+select = ["sensor", "ts", "temperature"]
+eq = ["region"]
+range = "ts"
+order = "ts"
+weight = 25
+result_rows = 500
+[[query]]
+name = "LowBattery"
+entity = "readings"
+select = ["sensor", "battery", "ts"]
+eq = ["network"]
+weight = 5
+result_rows = 50
+[[query]]
+name = "SensorInfo"
+entity = "sensors"
+select = ["network", "region", "model", "installed"]
+eq = ["sensor"]
+weight = 300
+result_rows = 1
+[[query]]
+name = "SensorsOfNetwork"
+entity = "sensors"
+select = ["sensor", "region", "model"]
+eq = ["network"]
+weight = 20
+result_rows = 100
